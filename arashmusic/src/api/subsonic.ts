@@ -180,6 +180,18 @@ export async function deletePlaylist(id: string): Promise<void> {
   await request("deletePlaylist", { id })
 }
 
+export async function reorderPlaylist(playlistId: string, orderedIds: string[], originalCount: number): Promise<void> {
+  let url = buildUrl("updatePlaylist", { playlistId })
+  for (let i = 0; i < originalCount; i++) url += "&songIndexToRemove=" + i
+  for (const id of orderedIds) url += "&songIdToAdd=" + encodeURIComponent(id)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("Reorder failed (" + res.status + ")")
+  const body = await res.json()
+  if (body["subsonic-response"]?.status === "failed") {
+    throw new Error(body["subsonic-response"].error?.message || "Reorder failed")
+  }
+}
+
 export async function search(query: string): Promise<SearchResult> {
   const res = await request<{ searchResult3?: Partial<SearchResult> }>("search3", {
     query,

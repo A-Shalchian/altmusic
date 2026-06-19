@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { ListMusic, Pencil, Play, Trash2 } from "lucide-react"
-import { deletePlaylist, renamePlaylist } from "../api/subsonic"
+import { deletePlaylist, renamePlaylist, reorderPlaylist } from "../api/subsonic"
 import { Cover } from "../components/Cover"
 import { TrackList } from "../components/TrackList"
 import { usePlaylist } from "../queries/music"
@@ -117,7 +117,19 @@ export function PlaylistView() {
           <p>Open a song menu and choose "Add to playlist" to fill it up.</p>
         </div>
       ) : (
-        <TrackList songs={songs} playlistId={id} />
+        <TrackList
+          songs={songs}
+          playlistId={id}
+          onReorder={async (orderedIds) => {
+            if (!id) return
+            try {
+              await reorderPlaylist(id, orderedIds, songs.length)
+              queryClient.invalidateQueries({ queryKey: ["playlist", id] })
+            } catch (error) {
+              window.alert("Could not reorder: " + (error as Error).message)
+            }
+          }}
+        />
       )}
     </div>
   )
