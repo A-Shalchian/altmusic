@@ -13,6 +13,14 @@ export function useAllSongs() {
   })
 }
 
+export function useArtistSongs(id: string | undefined) {
+  return useQuery({
+    queryKey: ["artistSongs", id],
+    queryFn: () => api.getArtistSongs(id as string),
+    enabled: Boolean(id)
+  })
+}
+
 export function useEntireLibrary() {
   return useQuery({
     queryKey: ["entireLibrary"],

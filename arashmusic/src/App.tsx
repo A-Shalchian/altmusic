@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { Layout } from "./components/Layout"
+import { ArtistView } from "./screens/ArtistView"
 import { Favorites } from "./screens/Favorites"
 import { Home } from "./screens/Home"
 import { LockScreen } from "./screens/LockScreen"
@@ -34,6 +35,7 @@ export function App() {
           <Route path="/playlists" element={<Playlists />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/playlist/:id" element={<PlaylistView />} />
+          <Route path="/artist/:id" element={<ArtistView />} />
           <Route path="/smart/:rule" element={<SmartList />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/settings" element={<Settings />} />

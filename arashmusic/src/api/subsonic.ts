@@ -117,6 +117,17 @@ export async function getArtist(id: string): Promise<Artist> {
   return res.artist
 }
 
+export async function getArtistSongs(id: string): Promise<{ name: string; coverArt?: string; songs: Song[] }> {
+  const artist = await getArtist(id)
+  const albums = artist.album ?? []
+  const songs: Song[] = []
+  for (const album of albums) {
+    const full = await getAlbum(album.id)
+    if (full.song) songs.push(...full.song)
+  }
+  return { name: artist.name, coverArt: artist.coverArt || albums[0]?.coverArt, songs }
+}
+
 export async function getPlaylists(): Promise<Playlist[]> {
   const res = await request<{ playlists?: { playlist?: Playlist[] } }>("getPlaylists")
   return res.playlists?.playlist ?? []

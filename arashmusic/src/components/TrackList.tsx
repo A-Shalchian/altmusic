@@ -1,5 +1,6 @@
 import type * as React from "react"
 import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowDownToLine, Check, Clock, Heart, HeartOff, ListMusic, ListPlus, ListStart, ListX, MoreVertical, Pause, Play, Trash2 } from "lucide-react"
 import type { Song } from "../api/types"
@@ -219,6 +220,7 @@ interface TrackRowProps {
 
 function TrackRow({ song, index, active, playing, showAlbum, offline, reorderable, onReorderStart, onReorderDrop, onClick, onContext, onKebab }: TrackRowProps) {
   const [hover, setHover] = useState(false)
+  const navigate = useNavigate()
 
   function onContextMenu(event: React.MouseEvent) {
     event.preventDefault()
@@ -257,7 +259,16 @@ function TrackRow({ song, index, active, playing, showAlbum, offline, reorderabl
         <Cover coverArt={song.coverArt} size={80} className="track-art" alt={song.title} />
         <div style={{ minWidth: 0 }}>
           <div className="track-title">{song.title}</div>
-          <div className="track-artist">{song.artist || "Unknown artist"}</div>
+          <div
+            className={"track-artist" + (song.artistId ? " linkable" : "")}
+            onClick={(e) => {
+              if (!song.artistId) return
+              e.stopPropagation()
+              navigate("/artist/" + song.artistId)
+            }}
+          >
+            {song.artist || "Unknown artist"}
+          </div>
         </div>
       </div>
       <div className="track-album">{showAlbum ? song.album : ""}</div>

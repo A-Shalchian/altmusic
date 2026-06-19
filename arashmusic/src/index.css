@@ -523,6 +523,11 @@ a {
   color: var(--accent);
 }
 
+.track-artist.linkable:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 .track-kebab {
   opacity: 0;
 }
