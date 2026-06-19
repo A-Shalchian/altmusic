@@ -13,6 +13,15 @@ export interface Song {
   starred?: string
   contentType?: string
   path?: string
+  playCount?: number
+  created?: string
+  played?: string
+  replayGain?: {
+    trackGain?: number
+    trackPeak?: number
+    albumGain?: number
+    albumPeak?: number
+  }
 }
 
 export interface Album {

@@ -13,6 +13,14 @@ export function useAllSongs() {
   })
 }
 
+export function useEntireLibrary() {
+  return useQuery({
+    queryKey: ["entireLibrary"],
+    queryFn: () => api.getEntireLibrary(),
+    staleTime: 120000
+  })
+}
+
 export function useAlbumList(type: string, size = 24) {
   return useQuery({
     queryKey: ["albumList", type, size],

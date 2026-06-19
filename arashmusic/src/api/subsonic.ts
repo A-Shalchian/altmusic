@@ -148,6 +148,17 @@ export async function getAllSongs(offset: number, size: number): Promise<Song[]>
   return res.searchResult3?.song ?? []
 }
 
+export async function getEntireLibrary(): Promise<Song[]> {
+  const all: Song[] = []
+  const page = 500
+  for (let offset = 0; offset < 20000; offset += page) {
+    const batch = await getAllSongs(offset, page)
+    all.push(...batch)
+    if (batch.length < page) break
+  }
+  return all
+}
+
 export async function createPlaylist(name: string): Promise<string> {
   const res = await request<{ playlist?: { id: string } }>("createPlaylist", { name })
   return res.playlist?.id ?? ""

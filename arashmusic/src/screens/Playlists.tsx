@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { Heart, ListMusic, Plus } from "lucide-react"
+import { Clock3, Heart, ListMusic, Plus, Sparkles, TrendingUp } from "lucide-react"
 import { createPlaylist } from "../api/subsonic"
 import { Cover } from "../components/Cover"
 import { usePlaylists } from "../queries/music"
@@ -74,6 +74,36 @@ export function Playlists() {
           </div>
           <div className="card-title">Liked Songs</div>
           <div className="card-sub">Your favorites</div>
+        </div>
+
+        <div className="card" onClick={() => navigate("/smart/recent")}>
+          <div className="card-art-wrap">
+            <div className="card-art" style={{ display: "grid", placeItems: "center", background: "linear-gradient(150deg, var(--accent), var(--accent-deep))" }}>
+              <Sparkles size={48} color="#1a1205" />
+            </div>
+          </div>
+          <div className="card-title">Recently Added</div>
+          <div className="card-sub">Smart mix</div>
+        </div>
+
+        <div className="card" onClick={() => navigate("/smart/most-played")}>
+          <div className="card-art-wrap">
+            <div className="card-art" style={{ display: "grid", placeItems: "center", background: "linear-gradient(150deg, #6f53c4, #3a2d6b)" }}>
+              <TrendingUp size={48} color="#fff" />
+            </div>
+          </div>
+          <div className="card-title">Most Played</div>
+          <div className="card-sub">Smart mix</div>
+        </div>
+
+        <div className="card" onClick={() => navigate("/smart/never-played")}>
+          <div className="card-art-wrap">
+            <div className="card-art" style={{ display: "grid", placeItems: "center", background: "linear-gradient(150deg, #2f8f7a, #16413a)" }}>
+              <Clock3 size={48} color="#fff" />
+            </div>
+          </div>
+          <div className="card-title">Never Played</div>
+          <div className="card-sub">Smart mix</div>
         </div>
 
         {isLoading ? null : (playlists ?? []).map((playlist) => (
