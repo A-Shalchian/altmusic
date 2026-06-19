@@ -1,4 +1,4 @@
-import { Heart, ListMusic, Music2, Shuffle } from "lucide-react"
+import { BarChart3, Heart, ListMusic, Music2, Shuffle } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { getRandomSongs } from "../api/subsonic"
 import { Cover } from "../components/Cover"
@@ -48,6 +48,12 @@ export function Home() {
             <Music2 size={20} />
           </span>
           All Songs
+        </button>
+        <button className="tile" onClick={() => navigate("/stats")}>
+          <span className="tile-icon">
+            <BarChart3 size={20} />
+          </span>
+          Your Stats
         </button>
       </div>
 
