@@ -1939,6 +1939,110 @@ a {
   color: #1a1205;
 }
 
+.settings-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toggle {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+
+.toggle.on {
+  background: var(--accent);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease;
+}
+
+.toggle.on .toggle-knob {
+  transform: translateX(20px);
+}
+
+.eq-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+  transition: opacity 0.18s ease;
+}
+
+.eq-grid.disabled {
+  opacity: 0.4;
+}
+
+.eq-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.eq-slider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 6px;
+  height: 120px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.eq-slider.wide {
+  writing-mode: horizontal-tb;
+  direction: ltr;
+  width: 100%;
+  height: 6px;
+  flex: 1;
+}
+
+.eq-val {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.eq-freq {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.preamp-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  transition: opacity 0.18s ease;
+}
+
+.preamp-row.disabled {
+  opacity: 0.4;
+}
+
+.preamp-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  width: 64px;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
