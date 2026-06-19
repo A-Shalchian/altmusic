@@ -1,6 +1,7 @@
 const path = require("path")
 const TelegramBot = require("node-telegram-bot-api")
 const { searchSongs, downloadById, loadConfig } = require("./download")
+const { batchDownload, isSpotifyUrl } = require("./spotdl")
 
 const config = loadConfig()
 
@@ -80,6 +81,17 @@ bot.on("message", async (msg) => {
 
   if (!permitted(msg)) {
     bot.sendMessage(msg.chat.id, "You are not allowed to use this bot.")
+    return
+  }
+
+  if (isSpotifyUrl(text)) {
+    const batchStatus = await bot.sendMessage(msg.chat.id, "Downloading from Spotify. This can take a while for albums and discographies...")
+    try {
+      const result = await batchDownload(text)
+      editText("Added " + result.downloaded + " tracks to your library.", msg.chat.id, batchStatus.message_id)
+    } catch (error) {
+      editText("Batch download failed: " + error.message, msg.chat.id, batchStatus.message_id)
+    }
     return
   }
 

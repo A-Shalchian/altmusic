@@ -41,6 +41,14 @@ if ((Test-Path (Join-Path $tools "ffmpeg.exe")) -and (Test-Path (Join-Path $tool
   Remove-Item -Recurse -Force $ex
 }
 
+Section "spotDL"
+$spotdl = Join-Path $tools "spotdl.exe"
+if (Test-Path $spotdl) { Write-Host "already present" } else {
+  $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/spotDL/spotify-downloader/releases/latest" -Headers @{ "User-Agent" = "arashmusic-setup" }
+  $asset = $rel.assets | Where-Object { $_.name -match "win" -and $_.name -match "\.exe$" } | Select-Object -First 1
+  Download $asset.browser_download_url $spotdl
+}
+
 Section "Navidrome"
 $navExe = Join-Path $navDir "navidrome.exe"
 if (Test-Path $navExe) { Write-Host "already present" } else {

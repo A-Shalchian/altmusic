@@ -4,5 +4,7 @@
   "telegramToken": "",
   "allowedUsers": [],
   "lastfmApiKey": "",
-  "lastfmSecret": ""
+  "lastfmSecret": "",
+  "spotifyClientId": "",
+  "spotifyClientSecret": ""
 }

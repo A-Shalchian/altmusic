@@ -6,6 +6,7 @@
     "bot": "node src/bot.js",
     "server": "node src/server.js",
     "get": "node src/cli.js",
+    "grab": "node src/grab.js",
     "lyrics": "node src/backfill-lyrics.js",
     "dev:app": "npm --prefix ../arashmusic run dev",
     "nav": "..\\navidrome\\navidrome.exe -c ..\\navidrome\\navidrome.toml",
