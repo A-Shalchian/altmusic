@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react"
 import type { Song } from "../api/types"
 import { coverArtUrl, getRandomSongs, getSimilarSongs, scrobble, streamUrl } from "../api/subsonic"
+import { getOfflineUrl } from "../lib/offline"
 import { usePlayerStore } from "../store/playerStore"
 import { useHistoryStore } from "../store/historyStore"
+import { useOfflineStore } from "../store/offlineStore"
 
 export function AudioEngine() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -21,6 +23,7 @@ export function AudioEngine() {
   const record = useHistoryStore((s) => s.record)
 
   const current = queue[index]
+  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!audioRef.current) return
@@ -28,12 +31,32 @@ export function AudioEngine() {
       audioRef.current.removeAttribute("src")
       return
     }
-    audioRef.current.src = streamUrl(current.id)
-    audioRef.current.load()
+    let cancelled = false
     scrobbledRef.current = null
     record(current)
-    if (playing) {
-      audioRef.current.play().catch(() => setPlaying(false))
+
+    async function load(song: Song) {
+      let src = streamUrl(song.id)
+      if (useOfflineStore.getState().has(song.id)) {
+        const offline = await getOfflineUrl(song.id)
+        if (offline) src = offline
+      }
+      if (cancelled || !audioRef.current) {
+        if (src.startsWith("blob:")) URL.revokeObjectURL(src)
+        return
+      }
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = src.startsWith("blob:") ? src : null
+      audioRef.current.src = src
+      audioRef.current.load()
+      if (usePlayerStore.getState().playing) {
+        audioRef.current.play().catch(() => setPlaying(false))
+      }
+    }
+
+    load(current)
+    return () => {
+      cancelled = true
     }
   }, [current?.id])
 

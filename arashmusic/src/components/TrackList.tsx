@@ -1,10 +1,12 @@
 import type * as React from "react"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Clock, Heart, HeartOff, ListMusic, ListPlus, ListX, MoreVertical, Pause, Play, Trash2 } from "lucide-react"
+import { ArrowDownToLine, Check, Clock, Heart, HeartOff, ListMusic, ListPlus, ListX, MoreVertical, Pause, Play, Trash2 } from "lucide-react"
 import type { Song } from "../api/types"
-import { deleteSong, removeFromPlaylist, star, unstar } from "../api/subsonic"
+import { deleteSong, removeFromPlaylist, star, streamUrl, unstar } from "../api/subsonic"
+import { downloadForOffline, removeOffline } from "../lib/offline"
 import { usePlayerStore } from "../store/playerStore"
+import { useOfflineStore } from "../store/offlineStore"
 import { formatTime } from "../lib/format"
 import { AddToPlaylistModal } from "./AddToPlaylistModal"
 import { Cover } from "./Cover"
@@ -32,9 +34,28 @@ export function TrackList({ songs, showAlbum = true, playlistId }: TrackListProp
   const playing = usePlayerStore((s) => s.playing)
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id)
 
+  const offlineIds = useOfflineStore((s) => s.ids)
+  const addOffline = useOfflineStore((s) => s.add)
+  const removeOfflineId = useOfflineStore((s) => s.remove)
+
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [addSong, setAddSong] = useState<Song | null>(null)
+
+  async function toggleOffline(song: Song) {
+    if (offlineIds.includes(song.id)) {
+      await removeOffline(song.id)
+      removeOfflineId(song.id)
+      return
+    }
+    addOffline(song.id)
+    try {
+      await downloadForOffline(song.id, streamUrl(song.id))
+    } catch (error) {
+      removeOfflineId(song.id)
+      window.alert("Could not download: " + (error as Error).message)
+    }
+  }
 
   const visible = songs.filter((song) => !hidden.has(song.id))
 
@@ -108,6 +129,11 @@ export function TrackList({ songs, showAlbum = true, playlistId }: TrackListProp
       onClick: () => toggleStar(song)
     })
     items.push({
+      label: offlineIds.includes(song.id) ? "Remove download" : "Download for offline",
+      icon: offlineIds.includes(song.id) ? <Check size={16} /> : <ArrowDownToLine size={16} />,
+      onClick: () => toggleOffline(song)
+    })
+    items.push({
       label: "Delete from library",
       icon: <Trash2 size={16} />,
       onClick: () => doDelete(song),
@@ -136,6 +162,7 @@ export function TrackList({ songs, showAlbum = true, playlistId }: TrackListProp
             active={song.id === currentId}
             playing={playing && song.id === currentId}
             showAlbum={showAlbum}
+            offline={offlineIds.includes(song.id)}
             onClick={() => onRow(song, realIndex)}
             onContext={(x, y) => openMenu(song, realIndex, x, y)}
             onKebab={(x, y) => openMenu(song, realIndex, x, y)}
@@ -156,12 +183,13 @@ interface TrackRowProps {
   active: boolean
   playing: boolean
   showAlbum: boolean
+  offline: boolean
   onClick: () => void
   onContext: (x: number, y: number) => void
   onKebab: (x: number, y: number) => void
 }
 
-function TrackRow({ song, index, active, playing, showAlbum, onClick, onContext, onKebab }: TrackRowProps) {
+function TrackRow({ song, index, active, playing, showAlbum, offline, onClick, onContext, onKebab }: TrackRowProps) {
   const [hover, setHover] = useState(false)
 
   function onContextMenu(event: React.MouseEvent) {
@@ -201,6 +229,7 @@ function TrackRow({ song, index, active, playing, showAlbum, onClick, onContext,
       </div>
       <div className="track-album">{showAlbum ? song.album : ""}</div>
       <div className="track-meta">
+        {offline ? <ArrowDownToLine size={14} className="track-offline" /> : null}
         {song.starred ? <Heart size={15} className="track-star" fill="currentColor" /> : null}
         <span>{formatTime(song.duration ?? 0)}</span>
         <button className="icon-btn track-kebab" onClick={onKebabClick} aria-label="More">
