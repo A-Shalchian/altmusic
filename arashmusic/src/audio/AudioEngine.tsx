@@ -1,16 +1,12 @@
 import { useEffect, useRef } from "react"
 import type { Song } from "../api/types"
-import { coverArtUrl, getRandomSongs, getSimilarSongs, scrobble, streamUrl } from "../api/subsonic"
-import { getOfflineUrl } from "../lib/offline"
+import { coverArtUrl, getRandomSongs, getSimilarSongs, scrobble } from "../api/subsonic"
+import { engine } from "./engine"
 import { usePlayerStore } from "../store/playerStore"
 import { useHistoryStore } from "../store/historyStore"
-import { useOfflineStore } from "../store/offlineStore"
+import { useSettingsStore } from "../store/settingsStore"
 
 export function AudioEngine() {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const scrobbledRef = useRef<string | null>(null)
-  const autoplayingRef = useRef(false)
-
   const queue = usePlayerStore((s) => s.queue)
   const index = usePlayerStore((s) => s.index)
   const playing = usePlayerStore((s) => s.playing)
@@ -18,57 +14,123 @@ export function AudioEngine() {
   const setPlaying = usePlayerStore((s) => s.setPlaying)
   const setProgress = usePlayerStore((s) => s.setProgress)
   const setDuration = usePlayerStore((s) => s.setDuration)
-  const next = usePlayerStore((s) => s.next)
-  const prev = usePlayerStore((s) => s.prev)
   const record = useHistoryStore((s) => s.record)
 
+  const crossfade = useSettingsStore((s) => s.crossfade)
+  const eqEnabled = useSettingsStore((s) => s.eqEnabled)
+  const eqGains = useSettingsStore((s) => s.eqGains)
+  const replayGain = useSettingsStore((s) => s.replayGain)
+  const preamp = useSettingsStore((s) => s.preamp)
+
+  const scrobbledRef = useRef<string | null>(null)
+  const autoplayingRef = useRef(false)
   const current = queue[index]
-  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!audioRef.current) return
-    if (!current) {
-      audioRef.current.removeAttribute("src")
-      return
+    function autoplayMore() {
+      if (autoplayingRef.current) return
+      autoplayingRef.current = true
+      const state = usePlayerStore.getState()
+      const seed = state.queue[state.index]
+      void (async () => {
+        let more: Song[] = []
+        if (seed) {
+          try {
+            more = await getSimilarSongs(seed.id, 25)
+          } catch (e) {
+            void e
+          }
+        }
+        if (!more.length) {
+          try {
+            more = await getRandomSongs(25)
+          } catch (e) {
+            void e
+          }
+        }
+        const existing = new Set(state.queue.map((s) => s.id))
+        more = more.filter((s) => !existing.has(s.id))
+        autoplayingRef.current = false
+        if (more.length) {
+          usePlayerStore.getState().enqueue(more)
+          usePlayerStore.getState().next()
+        } else {
+          usePlayerStore.getState().setPlaying(false)
+        }
+      })()
     }
-    let cancelled = false
+
+    engine.setup({
+      onTime: (time, duration) => {
+        setProgress(time)
+        if (duration) setDuration(duration)
+        if ("mediaSession" in navigator && duration && navigator.mediaSession.setPositionState) {
+          try {
+            navigator.mediaSession.setPositionState({ duration, position: time, playbackRate: 1 })
+          } catch (e) {
+            void e
+          }
+        }
+        const state = usePlayerStore.getState()
+        const cur = state.queue[state.index]
+        if (cur && scrobbledRef.current !== cur.id && duration && time / duration > 0.5) {
+          scrobbledRef.current = cur.id
+          scrobble(cur.id).catch(() => undefined)
+        }
+      },
+      onEnded: () => {
+        const { queue: q, index: i, repeat } = usePlayerStore.getState()
+        if (repeat === "off" && i >= q.length - 1) autoplayMore()
+        else usePlayerStore.getState().next()
+      },
+      getNext: () => {
+        const { queue: q, index: i, repeat } = usePlayerStore.getState()
+        if (repeat === "one") return null
+        if (i < q.length - 1) return q[i + 1]
+        if (repeat === "all") return q[0]
+        return null
+      },
+      onAdvance: () => usePlayerStore.getState().next()
+    })
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.setActionHandler("play", () => setPlaying(true))
+      navigator.mediaSession.setActionHandler("pause", () => setPlaying(false))
+      navigator.mediaSession.setActionHandler("nexttrack", () => usePlayerStore.getState().next())
+      navigator.mediaSession.setActionHandler("previoustrack", () => usePlayerStore.getState().prev())
+      navigator.mediaSession.setActionHandler("seekforward", (d) =>
+        engine.seek(engine.getCurrentTime() + (d.seekOffset || 10))
+      )
+      navigator.mediaSession.setActionHandler("seekbackward", (d) =>
+        engine.seek(Math.max(0, engine.getCurrentTime() - (d.seekOffset || 10)))
+      )
+      navigator.mediaSession.setActionHandler("seekto", (d) => {
+        if (d.seekTime != null) engine.seek(d.seekTime)
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!current) return
+    if (engine.currentSongId() === current.id) return
     scrobbledRef.current = null
     record(current)
-
-    async function load(song: Song) {
-      let src = streamUrl(song.id)
-      if (useOfflineStore.getState().has(song.id)) {
-        const offline = await getOfflineUrl(song.id)
-        if (offline) src = offline
-      }
-      if (cancelled || !audioRef.current) {
-        if (src.startsWith("blob:")) URL.revokeObjectURL(src)
-        return
-      }
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
-      blobUrlRef.current = src.startsWith("blob:") ? src : null
-      audioRef.current.src = src
-      audioRef.current.load()
-      if (usePlayerStore.getState().playing) {
-        audioRef.current.play().catch(() => setPlaying(false))
-      }
-    }
-
-    load(current)
-    return () => {
-      cancelled = true
-    }
+    engine.load(current, usePlayerStore.getState().playing)
   }, [current?.id])
 
   useEffect(() => {
-    if (!audioRef.current) return
-    if (playing) audioRef.current.play().catch(() => setPlaying(false))
-    else audioRef.current.pause()
-  }, [playing])
+    if (!current) return
+    if (playing) engine.play()
+    else engine.pause()
+  }, [playing, current?.id])
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume
+    engine.setVolume(volume)
   }, [volume])
+
+  useEffect(() => {
+    engine.setSettings({ crossfade, eqEnabled, eqGains, replayGain, preamp })
+  }, [crossfade, eqEnabled, eqGains, replayGain, preamp])
 
   useEffect(() => {
     if (!current || !("mediaSession" in navigator)) return
@@ -80,96 +142,7 @@ export function AudioEngine() {
         ? [{ src: coverArtUrl(current.coverArt, 512), sizes: "512x512", type: "image/jpeg" }]
         : []
     })
-    navigator.mediaSession.setActionHandler("play", () => setPlaying(true))
-    navigator.mediaSession.setActionHandler("pause", () => setPlaying(false))
-    navigator.mediaSession.setActionHandler("nexttrack", () => next())
-    navigator.mediaSession.setActionHandler("previoustrack", () => prev())
-    navigator.mediaSession.setActionHandler("seekbackward", (details) => {
-      if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - (details.seekOffset || 10))
-    })
-    navigator.mediaSession.setActionHandler("seekforward", (details) => {
-      if (audioRef.current) audioRef.current.currentTime = audioRef.current.currentTime + (details.seekOffset || 10)
-    })
-    navigator.mediaSession.setActionHandler("seekto", (details) => {
-      if (audioRef.current && details.seekTime != null) audioRef.current.currentTime = details.seekTime
-    })
   }, [current?.id])
 
-  async function autoplayMore() {
-    if (autoplayingRef.current) return
-    autoplayingRef.current = true
-    const state = usePlayerStore.getState()
-    const seed = state.queue[state.index]
-    let more: Song[] = []
-    if (seed) {
-      try {
-        more = await getSimilarSongs(seed.id, 25)
-      } catch (e) {
-        void e
-      }
-    }
-    if (!more.length) {
-      try {
-        more = await getRandomSongs(25)
-      } catch (e) {
-        void e
-      }
-    }
-    const existing = new Set(state.queue.map((s) => s.id))
-    more = more.filter((s) => !existing.has(s.id))
-    autoplayingRef.current = false
-    if (more.length) {
-      usePlayerStore.getState().enqueue(more)
-      usePlayerStore.getState().next()
-    } else {
-      usePlayerStore.getState().setPlaying(false)
-    }
-  }
-
-  function onEnded() {
-    const { queue: q, index: i, repeat } = usePlayerStore.getState()
-    if (repeat === "off" && i >= q.length - 1) {
-      autoplayMore()
-    } else {
-      next()
-    }
-  }
-
-  function onTimeUpdate() {
-    const el = audioRef.current
-    if (!el) return
-    setProgress(el.currentTime)
-    if ("mediaSession" in navigator && el.duration && navigator.mediaSession.setPositionState) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: el.duration,
-          position: el.currentTime,
-          playbackRate: el.playbackRate
-        })
-      } catch (e) {
-        void e
-      }
-    }
-    if (current && !scrobbledRef.current && el.duration && el.currentTime / el.duration > 0.5) {
-      scrobbledRef.current = current.id
-      scrobble(current.id).catch(() => undefined)
-    }
-  }
-
-  function onLoadedMetadata() {
-    if (audioRef.current) setDuration(audioRef.current.duration)
-  }
-
-  return (
-    <audio
-      ref={audioRef}
-      onTimeUpdate={onTimeUpdate}
-      onLoadedMetadata={onLoadedMetadata}
-      onEnded={onEnded}
-      onPlay={() => setPlaying(true)}
-      onPause={() => {
-        if (audioRef.current && !audioRef.current.ended) setPlaying(false)
-      }}
-    />
-  )
+  return null
 }

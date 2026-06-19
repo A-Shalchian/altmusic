@@ -13,6 +13,7 @@ import {
   SkipForward
 } from "lucide-react"
 import { coverArtUrl, star, unstar } from "../api/subsonic"
+import { engine } from "../audio/engine"
 import { usePlayerStore } from "../store/playerStore"
 import { useUiStore } from "../store/uiStore"
 import { extractColor } from "../lib/color"
@@ -54,8 +55,7 @@ export function NowPlaying() {
 
   function seek(value: number) {
     setProgress(value)
-    const audio = document.querySelector("audio")
-    if (audio) audio.currentTime = value
+    engine.seek(value)
   }
 
   async function toggleStar() {

@@ -1,7 +1,8 @@
 import { useEffect } from "react"
-import { ChevronLeft, ChevronRight, Lock, LogOut } from "lucide-react"
+import { ChevronLeft, ChevronRight, Lock, LogOut, Settings as SettingsIcon } from "lucide-react"
 import { Outlet, useNavigate } from "react-router-dom"
 import { AudioEngine } from "../audio/AudioEngine"
+import { engine } from "../audio/engine"
 import { useAuthStore } from "../store/authStore"
 import { useLockStore } from "../store/lockStore"
 import { usePlayerStore } from "../store/playerStore"
@@ -28,14 +29,13 @@ export function Layout() {
         return
       }
       const store = usePlayerStore.getState()
-      const audio = document.querySelector("audio")
       if (event.code === "Space") {
         event.preventDefault()
         store.toggle()
-      } else if (event.code === "ArrowRight" && audio) {
-        audio.currentTime = Math.min(audio.duration || audio.currentTime, audio.currentTime + 5)
-      } else if (event.code === "ArrowLeft" && audio) {
-        audio.currentTime = Math.max(0, audio.currentTime - 5)
+      } else if (event.code === "ArrowRight") {
+        engine.seek(engine.getCurrentTime() + 5)
+      } else if (event.code === "ArrowLeft") {
+        engine.seek(Math.max(0, engine.getCurrentTime() - 5))
       } else if (event.code === "ArrowUp") {
         event.preventDefault()
         store.setVolume(Math.min(1, store.volume + 0.05))
@@ -63,6 +63,9 @@ export function Layout() {
               </button>
             </div>
             <div style={{ flex: 1 }} />
+            <button className="round-btn" onClick={() => navigate("/settings")} aria-label="Settings">
+              <SettingsIcon size={17} />
+            </button>
             <button
               className="round-btn"
               onClick={hasPin ? lock : requestSetup}

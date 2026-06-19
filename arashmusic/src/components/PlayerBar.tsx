@@ -1,4 +1,5 @@
 import { ListMusic, Maximize2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from "lucide-react"
+import { engine } from "../audio/engine"
 import { usePlayerStore } from "../store/playerStore"
 import { useUiStore } from "../store/uiStore"
 import { formatTime } from "../lib/format"
@@ -28,8 +29,7 @@ export function PlayerBar() {
 
   function seek(value: number) {
     setProgress(value)
-    const audio = document.querySelector("audio")
-    if (audio) audio.currentTime = value
+    engine.seek(value)
   }
 
   const VolumeIcon = volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2

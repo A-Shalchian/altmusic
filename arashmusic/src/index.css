@@ -1909,6 +1909,36 @@ a {
   color: #1a1205;
 }
 
+.settings-section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin-top: 16px;
+}
+
+.settings-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+}
+
+.settings-desc {
+  color: var(--text-faint);
+  font-size: 13px;
+  margin: 6px 0 16px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-btn.on {
+  background: var(--accent);
+  color: #1a1205;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

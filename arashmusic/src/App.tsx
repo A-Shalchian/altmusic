@@ -7,6 +7,7 @@ import { LoginScreen } from "./screens/LoginScreen"
 import { Playlists } from "./screens/Playlists"
 import { PlaylistView } from "./screens/PlaylistView"
 import { Search } from "./screens/Search"
+import { Settings } from "./screens/Settings"
 import { SmartList } from "./screens/SmartList"
 import { Songs } from "./screens/Songs"
 import { Stats } from "./screens/Stats"
@@ -35,6 +36,7 @@ export function App() {
           <Route path="/playlist/:id" element={<PlaylistView />} />
           <Route path="/smart/:rule" element={<SmartList />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>
