@@ -528,6 +528,90 @@ a {
   text-decoration: underline;
 }
 
+.track-row.selected {
+  background: var(--accent-glow);
+}
+
+.select-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  color: #1a1205;
+}
+
+.select-box.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.select-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-h) + 22px);
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.select-count {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.select-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.select-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition: background 0.13s ease, color 0.13s ease;
+}
+
+.select-action:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.select-action.danger:hover {
+  color: var(--danger);
+  background: rgba(240, 106, 85, 0.13);
+}
+
+@media (max-width: 820px) {
+  .select-bar {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: 140px;
+    justify-content: space-between;
+  }
+
+  .select-action span,
+  .select-action {
+    font-size: 12px;
+    padding: 8px 9px;
+  }
+}
+
 .track-kebab {
   opacity: 0;
 }

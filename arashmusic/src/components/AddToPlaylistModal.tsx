@@ -7,23 +7,27 @@ import { addToPlaylist, createPlaylist } from "../api/subsonic"
 import { usePlaylists } from "../queries/music"
 
 interface AddToPlaylistModalProps {
-  song: Song
+  songs: Song[]
   onClose: () => void
 }
 
-export function AddToPlaylistModal({ song, onClose }: AddToPlaylistModalProps) {
+export function AddToPlaylistModal({ songs, onClose }: AddToPlaylistModalProps) {
   const queryClient = useQueryClient()
   const { data: playlists } = usePlaylists()
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState("")
   const [busy, setBusy] = useState(false)
 
+  async function addAll(playlistId: string) {
+    for (const song of songs) await addToPlaylist(playlistId, song.id)
+    queryClient.invalidateQueries({ queryKey: ["playlists"] })
+    queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] })
+  }
+
   async function addTo(playlistId: string) {
     setBusy(true)
     try {
-      await addToPlaylist(playlistId, song.id)
-      queryClient.invalidateQueries({ queryKey: ["playlists"] })
-      queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] })
+      await addAll(playlistId)
       onClose()
     } catch (error) {
       window.alert("Could not add: " + (error as Error).message)
@@ -37,14 +41,15 @@ export function AddToPlaylistModal({ song, onClose }: AddToPlaylistModalProps) {
     setBusy(true)
     try {
       const id = await createPlaylist(trimmed)
-      if (id) await addToPlaylist(id, song.id)
-      queryClient.invalidateQueries({ queryKey: ["playlists"] })
+      if (id) await addAll(id)
       onClose()
     } catch (error) {
       window.alert("Could not create: " + (error as Error).message)
       setBusy(false)
     }
   }
+
+  const subtitle = songs.length === 1 ? songs[0].title : songs.length + " songs"
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
@@ -55,7 +60,7 @@ export function AddToPlaylistModal({ song, onClose }: AddToPlaylistModalProps) {
             <X size={18} />
           </button>
         </div>
-        <p className="modal-sub">{song.title}</p>
+        <p className="modal-sub">{subtitle}</p>
 
         {creating ? (
           <div className="modal-create">
@@ -81,12 +86,7 @@ export function AddToPlaylistModal({ song, onClose }: AddToPlaylistModalProps) {
 
         <div className="modal-list">
           {(playlists ?? []).map((playlist) => (
-            <button
-              key={playlist.id}
-              className="modal-row"
-              onClick={() => addTo(playlist.id)}
-              disabled={busy}
-            >
+            <button key={playlist.id} className="modal-row" onClick={() => addTo(playlist.id)} disabled={busy}>
               <ListMusic size={18} />
               <span>{playlist.name}</span>
             </button>

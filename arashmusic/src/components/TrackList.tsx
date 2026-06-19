@@ -2,7 +2,7 @@ import type * as React from "react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowDownToLine, Check, Clock, Heart, HeartOff, ListMusic, ListPlus, ListStart, ListX, MoreVertical, Pause, Play, Trash2 } from "lucide-react"
+import { ArrowDownToLine, Check, Clock, Heart, HeartOff, ListChecks, ListMusic, ListPlus, ListStart, ListX, MoreVertical, Pause, Play, Trash2, X } from "lucide-react"
 import type { Song } from "../api/types"
 import { deleteSong, removeFromPlaylist, star, streamUrl, unstar } from "../api/subsonic"
 import { downloadForOffline, removeOffline } from "../lib/offline"
@@ -44,8 +44,20 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
 
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [addSong, setAddSong] = useState<Song | null>(null)
+  const [addSongs, setAddSongs] = useState<Song[] | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [localOrder, setLocalOrder] = useState<Song[] | null>(null)
+
+  const selecting = selected.size > 0
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
   const dragFrom = useRef<number | null>(null)
 
   useEffect(() => {
@@ -129,13 +141,36 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
     }
   }
 
+  function selectedSongs(): Song[] {
+    return (localOrder ?? songs).filter((s) => selected.has(s.id))
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+  }
+
+  function bulkDelete() {
+    const items = selectedSongs()
+    if (!items.length) return
+    setHidden((prev) => {
+      const next = new Set(prev)
+      items.forEach((s) => next.add(s.id))
+      return next
+    })
+    clearSelection()
+    Promise.all(items.map((s) => deleteSong(s).catch(() => undefined))).then(() =>
+      setTimeout(() => queryClient.invalidateQueries(), 1200)
+    )
+  }
+
   function buildItems(state: MenuState): MenuItem[] {
     const song = state.song
     const items: MenuItem[] = [
       { label: "Play", icon: <Play size={16} />, onClick: () => playQueue(songs, state.index) },
       { label: "Play next", icon: <ListStart size={16} />, onClick: () => playNext(song) },
       { label: "Add to queue", icon: <ListPlus size={16} />, onClick: () => enqueue([song]) },
-      { label: "Add to playlist", icon: <ListMusic size={16} />, onClick: () => setAddSong(song) }
+      { label: "Add to playlist", icon: <ListMusic size={16} />, onClick: () => setAddSongs([song]) },
+      { label: "Select", icon: <ListChecks size={16} />, onClick: () => setSelected(new Set([song.id])) }
     ]
     if (playlistId) {
       items.push({
@@ -185,11 +220,14 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
             showAlbum={showAlbum}
             offline={offlineIds.includes(song.id)}
             reorderable={Boolean(onReorder)}
+            selecting={selecting}
+            selected={selected.has(song.id)}
             onReorderStart={() => {
               dragFrom.current = index
             }}
             onReorderDrop={() => doReorder(index)}
-            onClick={() => onRow(song, realIndex)}
+            onClick={() => (selecting ? toggleSelect(song.id) : onRow(song, realIndex))}
+            onToggleSelect={() => toggleSelect(song.id)}
             onContext={(x, y) => openMenu(song, realIndex, x, y)}
             onKebab={(x, y) => openMenu(song, realIndex, x, y)}
           />
@@ -198,7 +236,33 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
       {menu ? (
         <Menu x={menu.x} y={menu.y} items={buildItems(menu)} onClose={() => setMenu(null)} />
       ) : null}
-      {addSong ? <AddToPlaylistModal song={addSong} onClose={() => setAddSong(null)} /> : null}
+      {addSongs ? <AddToPlaylistModal songs={addSongs} onClose={() => setAddSongs(null)} /> : null}
+      {selecting ? (
+        <div className="select-bar">
+          <button className="icon-btn" onClick={clearSelection} aria-label="Cancel selection">
+            <X size={18} />
+          </button>
+          <span className="select-count">{selected.size} selected</span>
+          <div className="select-actions">
+            <button className="select-action" onClick={() => { playQueue(selectedSongs(), 0); clearSelection() }}>
+              <Play size={16} fill="currentColor" />
+              Play
+            </button>
+            <button className="select-action" onClick={() => { enqueue(selectedSongs()); clearSelection() }}>
+              <ListPlus size={16} />
+              Queue
+            </button>
+            <button className="select-action" onClick={() => setAddSongs(selectedSongs())}>
+              <ListMusic size={16} />
+              Playlist
+            </button>
+            <button className="select-action danger" onClick={bulkDelete}>
+              <Trash2 size={16} />
+              Delete
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -211,14 +275,17 @@ interface TrackRowProps {
   showAlbum: boolean
   offline: boolean
   reorderable: boolean
+  selecting: boolean
+  selected: boolean
   onReorderStart: () => void
   onReorderDrop: () => void
   onClick: () => void
+  onToggleSelect: () => void
   onContext: (x: number, y: number) => void
   onKebab: (x: number, y: number) => void
 }
 
-function TrackRow({ song, index, active, playing, showAlbum, offline, reorderable, onReorderStart, onReorderDrop, onClick, onContext, onKebab }: TrackRowProps) {
+function TrackRow({ song, index, active, playing, showAlbum, offline, reorderable, selecting, selected, onReorderStart, onReorderDrop, onClick, onToggleSelect, onContext, onKebab }: TrackRowProps) {
   const [hover, setHover] = useState(false)
   const navigate = useNavigate()
 
@@ -235,7 +302,7 @@ function TrackRow({ song, index, active, playing, showAlbum, offline, reorderabl
 
   return (
     <div
-      className={"track-row" + (active ? " active" : "")}
+      className={"track-row" + (active ? " active" : "") + (selected ? " selected" : "")}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("application/x-song-id", song.id)
@@ -248,8 +315,13 @@ function TrackRow({ song, index, active, playing, showAlbum, offline, reorderabl
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div className="track-index">
-        {hover || active ? (
+      <div
+        className="track-index"
+        onClick={selecting ? (e) => { e.stopPropagation(); onToggleSelect() } : undefined}
+      >
+        {selecting ? (
+          <span className={"select-box" + (selected ? " on" : "")}>{selected ? <Check size={13} /> : null}</span>
+        ) : hover || active ? (
           playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />
         ) : (
           index + 1
