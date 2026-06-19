@@ -62,10 +62,24 @@ if (Test-Path $caddyExe) { Write-Host "already present" } else {
   Download "https://caddyserver.com/api/download?os=windows&arch=amd64" $caddyExe
 }
 
-Section "Navidrome config"
-$navToml = Join-Path $navDir "navidrome.toml"
+Section "Config and Navidrome settings"
 $musicDir = Join-Path $navDir "music"
 $dataDir = Join-Path $navDir "data"
+$noBom = New-Object System.Text.UTF8Encoding($false)
+
+$cfgPath = Join-Path $root "arashmusic-downloader\config.json"
+$examplePath = Join-Path $root "arashmusic-downloader\config.example.json"
+if (Test-Path $cfgPath) {
+  $cfg = ([System.IO.File]::ReadAllText($cfgPath)).TrimStart([char]0xFEFF) | ConvertFrom-Json
+} else {
+  $cfg = Get-Content $examplePath -Raw | ConvertFrom-Json
+}
+$cfg.musicDir = $musicDir
+$cfg.navidromeDb = Join-Path $dataDir "navidrome.db"
+[System.IO.File]::WriteAllText($cfgPath, ($cfg | ConvertTo-Json), $noBom)
+Write-Host "wrote config.json (paths set; secrets preserved if present)"
+
+$navToml = Join-Path $navDir "navidrome.toml"
 $tomlLines = @(
   ("MusicFolder = '" + $musicDir + "'"),
   ("DataFolder = '" + $dataDir + "'"),
@@ -74,22 +88,14 @@ $tomlLines = @(
   "ScanSchedule = '@every 1m'",
   "EnableInsightsCollector = false"
 )
-$noBom = New-Object System.Text.UTF8Encoding($false)
+if ($cfg.lastfmApiKey -and $cfg.lastfmSecret) {
+  $tomlLines += "LastFM.Enabled = true"
+  $tomlLines += ("LastFM.ApiKey = '" + $cfg.lastfmApiKey + "'")
+  $tomlLines += ("LastFM.Secret = '" + $cfg.lastfmSecret + "'")
+  Write-Host "Last.fm enabled from config.json"
+}
 [System.IO.File]::WriteAllText($navToml, ($tomlLines -join "`r`n"), $noBom)
 Write-Host "wrote navidrome.toml"
-
-Section "Downloader config"
-$cfgPath = Join-Path $root "arashmusic-downloader\config.json"
-$examplePath = Join-Path $root "arashmusic-downloader\config.example.json"
-if (Test-Path $cfgPath) {
-  $cfg = Get-Content $cfgPath -Raw | ConvertFrom-Json
-} else {
-  $cfg = Get-Content $examplePath -Raw | ConvertFrom-Json
-}
-$cfg.musicDir = $musicDir
-$cfg.navidromeDb = Join-Path $dataDir "navidrome.db"
-[System.IO.File]::WriteAllText($cfgPath, ($cfg | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
-Write-Host "wrote config.json (paths set; token preserved if it existed)"
 
 Section "Installing dependencies"
 Push-Location $root

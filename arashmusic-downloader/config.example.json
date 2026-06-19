@@ -2,5 +2,7 @@
   "musicDir": "",
   "navidromeDb": "",
   "telegramToken": "",
-  "allowedUsers": []
+  "allowedUsers": [],
+  "lastfmApiKey": "",
+  "lastfmSecret": ""
 }
