@@ -178,6 +178,8 @@ function TrackRow({ song, index, active, playing, showAlbum, onClick, onContext,
   return (
     <div
       className={"track-row" + (active ? " active" : "")}
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData("application/x-song-id", song.id)}
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={() => setHover(true)}

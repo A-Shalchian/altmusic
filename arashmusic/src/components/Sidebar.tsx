@@ -1,10 +1,29 @@
+import { useState } from "react"
 import { Heart, Home, ListMusic, Music2, Plus, Search } from "lucide-react"
 import { NavLink, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
+import { addToPlaylist } from "../api/subsonic"
 import { usePlaylists } from "../queries/music"
 
 export function Sidebar() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: playlists } = usePlaylists()
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+
+  async function onDrop(event: React.DragEvent, playlistId: string) {
+    event.preventDefault()
+    setDropTarget(null)
+    const songId = event.dataTransfer.getData("application/x-song-id")
+    if (!songId) return
+    try {
+      await addToPlaylist(playlistId, songId)
+      queryClient.invalidateQueries({ queryKey: ["playlists"] })
+      queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] })
+    } catch (error) {
+      window.alert("Could not add: " + (error as Error).message)
+    }
+  }
 
   return (
     <aside className="sidebar">
@@ -45,8 +64,14 @@ export function Sidebar() {
           {(playlists ?? []).map((playlist) => (
             <div
               key={playlist.id}
-              className="sidebar-item with-icon"
+              className={"sidebar-item with-icon" + (dropTarget === playlist.id ? " drop-target" : "")}
               onClick={() => navigate("/playlist/" + playlist.id)}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDropTarget(playlist.id)
+              }}
+              onDragLeave={() => setDropTarget(null)}
+              onDrop={(e) => onDrop(e, playlist.id)}
             >
               <ListMusic size={16} />
               {playlist.name}

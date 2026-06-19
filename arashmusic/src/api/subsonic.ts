@@ -200,14 +200,12 @@ export async function getSimilarSongs(id: string, count = 50): Promise<Song[]> {
   return res.similarSongs2?.song ?? []
 }
 
-export async function getLyrics(id: string): Promise<StructuredLyrics | null> {
+export async function getLyrics(id: string): Promise<StructuredLyrics[]> {
   const res = await request<{ lyricsList?: { structuredLyrics?: StructuredLyrics[] } }>(
     "getLyricsBySongId",
     { id }
   )
-  const list = res.lyricsList?.structuredLyrics ?? []
-  const synced = list.find((entry) => entry.synced)
-  return synced ?? list[0] ?? null
+  return res.lyricsList?.structuredLyrics ?? []
 }
 
 export async function star(id: string): Promise<void> {
