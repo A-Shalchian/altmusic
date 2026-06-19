@@ -93,6 +93,18 @@ Runs Navidrome + the Vite dev server (hot reload) + bot + server. The player is 
 | `npm start` | Run the production stack (Navidrome + Caddy + bot + server) |
 | `npm run dev` | Run the dev stack (Navidrome + Vite dev server + bot + server) |
 | `npm run build` | Rebuild the app after code changes |
+| `npm run autostart` | Launch the whole stack automatically at every logon (hidden) |
+| `npm run autostart:remove` | Turn off auto-start |
+
+## Auto-start on boot
+
+To make the laptop bring the whole stack up by itself, run once:
+
+```powershell
+npm run autostart
+```
+
+This registers a Windows Scheduled Task that launches `npm start` hidden at every logon, so Navidrome + Caddy + the bot + the management server come up without you opening a terminal. Remove it any time with `npm run autostart:remove`. (Set the laptop to never sleep so it stays reachable.)
 
 ## Notes
 

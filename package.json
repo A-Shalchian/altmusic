@@ -12,7 +12,9 @@
     "bot": "npm --prefix arashmusic-downloader run bot",
     "server": "npm --prefix arashmusic-downloader run server",
     "start": "concurrently -n nav,web,bot,server -c yellow,blue,magenta,green \"npm:nav\" \"npm:caddy\" \"npm:bot\" \"npm:server\"",
-    "dev": "concurrently -n nav,app,bot,server -c yellow,cyan,magenta,green \"npm:nav\" \"npm:app\" \"npm:bot\" \"npm:server\""
+    "dev": "concurrently -n nav,app,bot,server -c yellow,cyan,magenta,green \"npm:nav\" \"npm:app\" \"npm:bot\" \"npm:server\"",
+    "autostart": "powershell -ExecutionPolicy Bypass -File ./autostart.ps1",
+    "autostart:remove": "powershell -ExecutionPolicy Bypass -File ./autostart.ps1 -Remove"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"
