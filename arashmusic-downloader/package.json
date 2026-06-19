@@ -1,0 +1,23 @@
+{
+  "name": "arashmusic-downloader",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "bot": "node src/bot.js",
+    "server": "node src/server.js",
+    "get": "node src/cli.js",
+    "lyrics": "node src/backfill-lyrics.js",
+    "dev:app": "npm --prefix ../arashmusic run dev",
+    "nav": "..\\navidrome\\navidrome.exe -c ..\\navidrome\\navidrome.toml",
+    "all": "concurrently -n app,bot,server -c cyan,magenta,green \"npm:dev:app\" \"npm:bot\" \"npm:server\"",
+    "services": "concurrently -n bot,server -c magenta,green \"npm:bot\" \"npm:server\"",
+    "stack": "concurrently -n nav,app,bot,server -c yellow,cyan,magenta,green \"npm:nav\" \"npm:dev:app\" \"npm:bot\" \"npm:server\"",
+    "serve": "concurrently -n nav,bot,server -c yellow,magenta,green \"npm:nav\" \"npm:bot\" \"npm:server\""
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
