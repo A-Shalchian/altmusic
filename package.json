@@ -1,0 +1,20 @@
+{
+  "name": "arashmusic-stack",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Self-hosted personal music: Navidrome + arashmusic PWA + Telegram downloader",
+  "scripts": {
+    "setup": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
+    "build": "npm --prefix arashmusic run build",
+    "nav": "navidrome\\navidrome.exe -c navidrome\\navidrome.toml",
+    "caddy": "caddy\\caddy.exe run --config Caddyfile",
+    "app": "npm --prefix arashmusic run dev",
+    "bot": "npm --prefix arashmusic-downloader run bot",
+    "server": "npm --prefix arashmusic-downloader run server",
+    "start": "concurrently -n nav,web,bot,server -c yellow,blue,magenta,green \"npm:nav\" \"npm:caddy\" \"npm:bot\" \"npm:server\"",
+    "dev": "concurrently -n nav,app,bot,server -c yellow,cyan,magenta,green \"npm:nav\" \"npm:app\" \"npm:bot\" \"npm:server\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
