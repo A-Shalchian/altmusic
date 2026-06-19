@@ -1,4 +1,5 @@
 import { EQ_BANDS, useSettingsStore } from "../store/settingsStore"
+import { ACCENT_PRESETS, useThemeStore } from "../store/themeStore"
 
 const CROSSFADE_OPTIONS = [0, 2, 4, 6, 8, 12]
 
@@ -30,10 +31,31 @@ export function Settings() {
   const setReplayGain = useSettingsStore((s) => s.setReplayGain)
   const preamp = useSettingsStore((s) => s.preamp)
   const setPreamp = useSettingsStore((s) => s.setPreamp)
+  const accent = useThemeStore((s) => s.accent)
+  const setAccent = useThemeStore((s) => s.setAccent)
 
   return (
     <div className="content fade-up">
       <h1 className="greeting">Settings</h1>
+
+      <section className="settings-section">
+        <h2 className="settings-title">Accent color</h2>
+        <p className="settings-desc">Pick the highlight color used across the app.</p>
+        <div className="swatch-row">
+          {ACCENT_PRESETS.map((color) => (
+            <button
+              key={color}
+              className={"swatch" + (accent.toLowerCase() === color.toLowerCase() ? " on" : "")}
+              style={{ background: color }}
+              onClick={() => setAccent(color)}
+              aria-label={"Accent " + color}
+            />
+          ))}
+          <label className="swatch swatch-custom" aria-label="Custom color">
+            <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} />
+          </label>
+        </div>
+      </section>
 
       <section className="settings-section">
         <h2 className="settings-title">Crossfade</h2>
