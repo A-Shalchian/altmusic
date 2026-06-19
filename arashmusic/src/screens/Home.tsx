@@ -1,4 +1,4 @@
-import { BarChart3, Heart, ListMusic, Music2, Shuffle } from "lucide-react"
+import { ArrowDownToLine, BarChart3, Heart, ListMusic, Music2, Shuffle } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { getRandomSongs } from "../api/subsonic"
 import { Cover } from "../components/Cover"
@@ -54,6 +54,12 @@ export function Home() {
             <BarChart3 size={20} />
           </span>
           Your Stats
+        </button>
+        <button className="tile" onClick={() => navigate("/downloads")}>
+          <span className="tile-icon">
+            <ArrowDownToLine size={20} />
+          </span>
+          Downloads
         </button>
       </div>
 

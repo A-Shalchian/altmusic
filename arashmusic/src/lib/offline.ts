@@ -4,11 +4,14 @@ function key(id: string): string {
   return "/offline/" + id
 }
 
-export async function downloadForOffline(id: string, url: string): Promise<void> {
+export async function downloadForOffline(id: string, url: string): Promise<number> {
   const res = await fetch(url)
   if (!res.ok) throw new Error("Download failed (" + res.status + ")")
+  const type = res.headers.get("Content-Type") || "audio/mpeg"
+  const buffer = await res.arrayBuffer()
   const cache = await caches.open(CACHE_NAME)
-  await cache.put(key(id), res)
+  await cache.put(key(id), new Response(buffer, { headers: { "Content-Type": type } }))
+  return buffer.byteLength
 }
 
 export async function getOfflineUrl(id: string): Promise<string | null> {

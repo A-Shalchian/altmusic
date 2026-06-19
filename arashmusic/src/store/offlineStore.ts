@@ -1,20 +1,30 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
+export interface OfflineItem {
+  id: string
+  title: string
+  artist: string
+  coverArt?: string
+  size: number
+}
+
 interface OfflineState {
-  ids: string[]
+  items: OfflineItem[]
   has: (id: string) => boolean
-  add: (id: string) => void
+  add: (item: OfflineItem) => void
   remove: (id: string) => void
+  clear: () => void
 }
 
 export const useOfflineStore = create<OfflineState>()(
   persist(
     (set, get) => ({
-      ids: [],
-      has: (id) => get().ids.includes(id),
-      add: (id) => set((s) => (s.ids.includes(id) ? {} : { ids: [...s.ids, id] })),
-      remove: (id) => set((s) => ({ ids: s.ids.filter((x) => x !== id) }))
+      items: [],
+      has: (id) => get().items.some((item) => item.id === id),
+      add: (item) => set((s) => (s.items.some((i) => i.id === item.id) ? {} : { items: [...s.items, item] })),
+      remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+      clear: () => set({ items: [] })
     }),
     { name: "arashmusic-offline" }
   )

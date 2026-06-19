@@ -37,9 +37,10 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
   const playing = usePlayerStore((s) => s.playing)
   const currentId = usePlayerStore((s) => s.queue[s.index]?.id)
 
-  const offlineIds = useOfflineStore((s) => s.ids)
+  const offlineItems = useOfflineStore((s) => s.items)
   const addOffline = useOfflineStore((s) => s.add)
   const removeOfflineId = useOfflineStore((s) => s.remove)
+  const offlineIds = offlineItems.map((i) => i.id)
 
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [hidden, setHidden] = useState<Set<string>>(new Set())
@@ -68,11 +69,10 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
       removeOfflineId(song.id)
       return
     }
-    addOffline(song.id)
     try {
-      await downloadForOffline(song.id, streamUrl(song.id))
+      const size = await downloadForOffline(song.id, streamUrl(song.id))
+      addOffline({ id: song.id, title: song.title, artist: song.artist || "", coverArt: song.coverArt, size })
     } catch (error) {
-      removeOfflineId(song.id)
       window.alert("Could not download: " + (error as Error).message)
     }
   }
