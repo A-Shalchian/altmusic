@@ -21,13 +21,13 @@ export function Search() {
     return () => clearTimeout(id)
   }, [term])
 
-  useEffect(() => {
-    const id = setTimeout(() => setWebTerm(term.trim()), 700)
-    return () => clearTimeout(id)
-  }, [term])
-
   const { data, isFetching } = useSearch(debounced)
   const web = useWebSearch(webTerm)
+
+  function searchWeb() {
+    const q = term.trim()
+    if (q.length > 1) setWebTerm(q)
+  }
 
   function setGrab(id: string, status: GrabStatus, error?: string) {
     setGrabs((prev) => ({ ...prev, [id]: { status, error } }))
@@ -55,6 +55,9 @@ export function Search() {
         <input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") searchWeb()
+          }}
           placeholder="Songs and artists"
           autoFocus
         />
@@ -74,8 +77,15 @@ export function Search() {
       {debounced && data && data.song.length === 0 && !isFetching ? (
         <div className="empty" style={{ padding: "34px 20px" }}>
           <h3>Nothing in your library for "{debounced}"</h3>
-          <p>Grab it from the internet below.</p>
+          <p>Search the internet below.</p>
         </div>
+      ) : null}
+
+      {term.trim().length > 1 && term.trim() !== webTerm ? (
+        <button className="web-search-go" onClick={searchWeb}>
+          <Globe size={17} />
+          Search the internet for "{term.trim()}"
+        </button>
       ) : null}
 
       {webTerm.length > 1 ? (
