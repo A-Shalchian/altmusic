@@ -1,6 +1,6 @@
 const fs = require("fs")
 const { DatabaseSync } = require("node:sqlite")
-const { getBlacklist } = require("./store")
+const { getBlacklist, getSearches } = require("./store")
 
 const CACHE_TTL = 10 * 60 * 1000
 const SEED_LIMIT = 4
@@ -33,7 +33,7 @@ function fetchJson(url) {
 }
 
 function readLibrary(dbPath) {
-  if (!dbPath || !fs.existsSync(dbPath)) return { seeds: [], have: new Set() }
+  if (!dbPath || !fs.existsSync(dbPath)) return { seeds: [], have: new Set(), haveTitles: new Set() }
   const db = new DatabaseSync(dbPath, { readOnly: true })
   try {
     const rows = db.prepare("select artist, title from media_file").all()
@@ -80,7 +80,27 @@ function nameMatches(seed, candidate) {
   return a === b || a.includes(b) || b.includes(a)
 }
 
-async function sectionForSeed(seed, have, haveTitles, seen, blacklist) {
+// resolve a free-text search term to a Deezer artist: exact artist hit first,
+// then the artist of the top matching track (covers song-title searches)
+async function artistFromQuery(term) {
+  try {
+    const found = await fetchJson("https://api.deezer.com/search/artist?q=" + encodeURIComponent(term))
+    const artist = found.data && found.data[0]
+    if (artist && nameMatches(term, artist.name) && (artist.nb_fan || 0) >= 2000) return artist.name
+  } catch (e) {
+    void e
+  }
+  try {
+    const tracks = await fetchJson("https://api.deezer.com/search/track?q=" + encodeURIComponent(term))
+    const track = tracks.data && tracks.data[0]
+    if (track && track.artist && track.artist.name) return track.artist.name
+  } catch (e) {
+    void e
+  }
+  return null
+}
+
+async function sectionForSeed(seed, have, haveTitles, seen, blacklist, title) {
   const found = await fetchJson("https://api.deezer.com/search/artist?q=" + encodeURIComponent(seed))
   const artist = found.data && found.data[0]
   if (!artist) return null
@@ -117,7 +137,7 @@ async function sectionForSeed(seed, have, haveTitles, seen, blacklist) {
   }
 
   if (!tracks.length) return null
-  return { title: "Because you listen to " + seed, tracks: tracks.slice(0, TRACKS_PER_SECTION) }
+  return { title: title || "Because you listen to " + seed, tracks: tracks.slice(0, TRACKS_PER_SECTION) }
 }
 
 async function getRecommendations(config, refresh) {
@@ -127,9 +147,31 @@ async function getRecommendations(config, refresh) {
   const blacklist = getBlacklist()
   const sections = []
   const seen = new Set()
+  const usedArtists = new Set()
+
+  // recent searches are the strongest taste signal — lead with them
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000
+  const recentSearches = getSearches().filter((s) => s.at >= cutoff).slice(0, 3)
+  for (const search of recentSearches) {
+    if (sections.length >= 2) break
+    try {
+      const artist = await artistFromQuery(search.term)
+      if (!artist || usedArtists.has(norm(artist))) continue
+      usedArtists.add(norm(artist))
+      const section = await sectionForSeed(
+        artist, have, haveTitles, seen, blacklist,
+        'Because you searched for "' + search.term + '"'
+      )
+      if (section) sections.push(section)
+    } catch (e) {
+      void e
+    }
+  }
 
   for (const seed of seeds) {
-    if (sections.length >= SEED_LIMIT) break
+    if (sections.length >= SEED_LIMIT + 2) break
+    if (usedArtists.has(norm(seed))) continue
+    usedArtists.add(norm(seed))
     try {
       const section = await sectionForSeed(seed, have, haveTitles, seen, blacklist)
       if (section) sections.push(section)

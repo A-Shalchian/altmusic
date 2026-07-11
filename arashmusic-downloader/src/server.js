@@ -5,7 +5,7 @@ const { DatabaseSync } = require("node:sqlite")
 const { loadConfig, searchSongs, downloadById, downloadInput } = require("./download")
 const { downloadTrack } = require("./spotdl")
 const { getRecommendations, trackKey, norm } = require("./recommend")
-const { addToBlacklist } = require("./store")
+const { addToBlacklist, recordSearch } = require("./store")
 
 const PORT = 4544
 const JOB_TTL = 10 * 60 * 1000
@@ -109,15 +109,66 @@ function startPullJob(artist, title) {
   return id
 }
 
+// web-search results get staged under an artist subfolder so the move
+// can place them without knowing the artist up front
+function ytStageTemplate(key) {
+  return path.join(STAGE_DIR, key, "%(artist,uploader)s", "%(title)s.%(ext)s")
+}
+
+function stagedYtFile(key) {
+  const dir = path.join(STAGE_DIR, key)
+  if (!fs.existsSync(dir)) return null
+  for (const entry of fs.readdirSync(dir)) {
+    const sub = path.join(dir, entry)
+    if (!fs.statSync(sub).isDirectory()) continue
+    const mp3 = fs.readdirSync(sub).find((f) => f.endsWith(".mp3"))
+    if (mp3) return path.join(sub, mp3)
+  }
+  return null
+}
+
+function moveStagedYt(key, config) {
+  const dir = path.join(STAGE_DIR, key)
+  if (!fs.existsSync(dir)) return null
+  let moved = null
+  for (const entry of fs.readdirSync(dir)) {
+    const sub = path.join(dir, entry)
+    if (!fs.statSync(sub).isDirectory()) continue
+    const destDir = path.join(config.musicDir, sanitizeName(entry))
+    fs.mkdirSync(destDir, { recursive: true })
+    for (const file of fs.readdirSync(sub)) {
+      const target = path.join(destDir, file)
+      fs.renameSync(path.join(sub, file), target)
+      if (file.endsWith(".mp3")) moved = target
+    }
+  }
+  fs.rmSync(dir, { recursive: true, force: true })
+  return moved
+}
+
+function startYtPrefetch(videoId) {
+  const key = "yt-" + videoId
+  if (prefetches.has(key) || stagedYtFile(key)) return
+  const promise = downloadInput("https://www.youtube.com/watch?v=" + videoId, "320K", null, ytStageTemplate(key))
+    .catch(() => null)
+    .finally(() => prefetches.delete(key))
+  prefetches.set(key, promise)
+}
+
 function startJob(videoId, quality) {
   const id = String(++jobSeq)
   const job = { status: "downloading", file: null, error: null, startedAt: Date.now() }
   jobs.set(id, job)
-  downloadById(videoId, quality)
-    .then((file) => {
-      job.status = "done"
-      job.file = file ? path.basename(file) : null
-    })
+  ;(async () => {
+    const key = "yt-" + videoId
+    const inflight = prefetches.get(key)
+    if (inflight) await inflight
+    let file = null
+    if (quality === "320K" && stagedYtFile(key)) file = moveStagedYt(key, loadConfig())
+    if (!file) file = await downloadById(videoId, quality)
+    job.status = "done"
+    job.file = file ? path.basename(file) : null
+  })()
     .catch((error) => {
       job.status = "error"
       job.error = error.message
@@ -230,8 +281,13 @@ const server = http.createServer((req, res) => {
       send(res, 400, { ok: false, error: "missing q" })
       return
     }
+    recordSearch(query)
     searchSongs(query, 10)
-      .then((results) => send(res, 200, { ok: true, results }))
+      .then((results) => {
+        // speculatively stage the top hit so tapping Get is instant
+        if (results[0]) startYtPrefetch(results[0].id)
+        send(res, 200, { ok: true, results })
+      })
       .catch((error) => send(res, 500, { ok: false, error: error.message }))
     return
   }

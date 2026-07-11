@@ -37,8 +37,12 @@ function getSearches() {
 function recordSearch(query) {
   const term = String(query || "").trim()
   if (term.length < 2) return
+  const lower = term.toLowerCase()
   const state = load()
-  const searches = (state.searches || []).filter((s) => s.term.toLowerCase() !== term.toLowerCase())
+  // debounced typing records prefixes ("newj", "newje"); keep only the longest
+  const searches = (state.searches || []).filter(
+    (s) => !lower.startsWith(s.term.toLowerCase()) && !s.term.toLowerCase().startsWith(lower)
+  )
   searches.unshift({ term, at: Date.now() })
   state.searches = searches.slice(0, MAX_SEARCHES)
   save(state)
