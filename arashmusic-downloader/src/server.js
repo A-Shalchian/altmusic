@@ -3,6 +3,7 @@ const fs = require("fs")
 const path = require("path")
 const { DatabaseSync } = require("node:sqlite")
 const { loadConfig, searchSongs, downloadById, downloadInput } = require("./download")
+const { downloadTrack } = require("./spotdl")
 const { getRecommendations, trackKey } = require("./recommend")
 
 const PORT = 4544
@@ -64,10 +65,19 @@ function pruneStage() {
   }
 }
 
+// spotDL first (correct tags, clean "Artist - Title" filename); yt-dlp search
+// only as fallback when Spotify has no match
+function grabToStage(artist, title) {
+  const key = trackKey(artist, title)
+  return downloadTrack(artist, title, path.join(STAGE_DIR, key)).catch(() =>
+    downloadInput(grabQuery(artist, title), "320K", null, stageTemplate(key))
+  )
+}
+
 function startPrefetch(artist, title) {
   const key = trackKey(artist, title)
   if (prefetches.has(key) || stagedFile(key)) return
-  const promise = downloadInput(grabQuery(artist, title), "320K", null, stageTemplate(key))
+  const promise = grabToStage(artist, title)
     .catch(() => null)
     .finally(() => prefetches.delete(key))
   prefetches.set(key, promise)
@@ -81,11 +91,12 @@ function startPullJob(artist, title) {
     const key = trackKey(artist, title)
     const inflight = prefetches.get(key)
     if (inflight) await inflight
+    if (!stagedFile(key)) await grabToStage(artist, title)
     const config = loadConfig()
-    let file = stagedFile(key) ? moveStaged(key, artist, config) : null
-    if (!file) file = await downloadInput(grabQuery(artist, title), "320K")
+    const file = moveStaged(key, artist, config)
+    if (!file) throw new Error("download produced no file")
     job.status = "done"
-    job.file = file ? path.basename(file) : null
+    job.file = path.basename(file)
   })()
     .catch((error) => {
       job.status = "error"
@@ -273,6 +284,7 @@ const server = http.createServer((req, res) => {
 })
 
 pruneStage()
+setInterval(pruneStage, 60 * 60 * 1000).unref()
 
 server.listen(PORT, () => {
   console.log("arashmusic management server on port " + PORT)

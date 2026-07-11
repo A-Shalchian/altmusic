@@ -11,10 +11,9 @@ function isSpotifyUrl(text) {
   return /open\.spotify\.com\/(track|album|playlist|artist)\//i.test(text)
 }
 
-function batchDownload(input, onProgress) {
+function runSpotdl(input, template, threads, onProgress) {
   return new Promise((resolve, reject) => {
     const config = loadConfig()
-    const template = path.join(config.musicDir, "{artist}", "{album}", "{track-number} - {title}.{output-ext}")
     const args = [
       "download",
       input,
@@ -28,7 +27,7 @@ function batchDownload(input, onProgress) {
       FFMPEG,
       "--generate-lrc",
       "--threads",
-      "2"
+      String(threads)
     ]
     if (config.spotifyClientId && config.spotifyClientSecret) {
       args.push("--client-id", config.spotifyClientId, "--client-secret", config.spotifyClientSecret)
@@ -58,4 +57,20 @@ function batchDownload(input, onProgress) {
   })
 }
 
-module.exports = { batchDownload, isSpotifyUrl }
+function batchDownload(input, onProgress) {
+  const config = loadConfig()
+  const template = path.join(config.musicDir, "{artist}", "{album}", "{track-number} - {title}.{output-ext}")
+  return runSpotdl(input, template, 2, onProgress)
+}
+
+// single track by "artist - title" search, downloaded into an explicit directory
+// with a flat searchable filename; rejects when Spotify has no match so the
+// caller can fall back to yt-dlp
+async function downloadTrack(artist, title, outputDir) {
+  const template = path.join(outputDir, "{artist} - {title}.{output-ext}")
+  const result = await runSpotdl(artist + " - " + title, template, 1)
+  if (!result.downloaded) throw new Error("spotdl found no match for " + artist + " - " + title)
+  return result
+}
+
+module.exports = { batchDownload, downloadTrack, isSpotifyUrl }

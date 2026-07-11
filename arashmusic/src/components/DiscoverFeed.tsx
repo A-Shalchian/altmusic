@@ -16,18 +16,27 @@ function norm(value: string): string {
     .trim()
 }
 
+function artistMatches(a: string, b: string): boolean {
+  const x = norm(a)
+  const y = norm(b)
+  return x === y || x.includes(y) || y.includes(x)
+}
+
 async function findImported(fileName: string, track: RecTrack): Promise<Song | null> {
-  const query = fileName.replace(/\.mp3$/i, "")
+  const fromFile = fileName.replace(/\.mp3$/i, "")
+  const queries = [track.artist + " " + track.title, fromFile]
   for (let attempt = 0; attempt < 15; attempt++) {
-    try {
-      const result = await search(query)
-      const match =
-        result.song.find((s) => norm(s.title) === norm(query)) ||
-        result.song.find((s) => norm(s.title).includes(norm(track.title))) ||
-        result.song[0]
-      if (match) return match
-    } catch (error) {
-      void error
+    for (const query of queries) {
+      try {
+        const result = await search(query)
+        const match =
+          result.song.find((s) => norm(s.title) === norm(fromFile)) ||
+          result.song.find((s) => norm(s.title).includes(norm(track.title)) && artistMatches(s.artist || "", track.artist)) ||
+          result.song.find((s) => norm(s.title).includes(norm(track.title)))
+        if (match) return match
+      } catch (error) {
+        void error
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, 2000))
   }
