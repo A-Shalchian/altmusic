@@ -239,6 +239,10 @@ export async function unstar(id: string): Promise<void> {
   await request("unstar", { id })
 }
 
+export async function startScan(): Promise<void> {
+  await request("startScan")
+}
+
 export async function scrobble(id: string, submission = true): Promise<void> {
   await request("scrobble", { id, submission: submission ? "true" : "false" })
 }

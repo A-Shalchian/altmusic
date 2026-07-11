@@ -2,6 +2,7 @@ import { ArrowDownToLine, BarChart3, Heart, ListMusic, Music2, Shuffle } from "l
 import { useNavigate } from "react-router-dom"
 import { getRandomSongs } from "../api/subsonic"
 import { Cover } from "../components/Cover"
+import { DiscoverFeed } from "../components/DiscoverFeed"
 import { TrackList } from "../components/TrackList"
 import { usePlaylists } from "../queries/music"
 import { usePlayerStore } from "../store/playerStore"
@@ -71,6 +72,8 @@ export function Home() {
           <TrackList songs={recent.slice(0, 8)} />
         </section>
       ) : null}
+
+      <DiscoverFeed />
 
       {playlists && playlists.length > 0 ? (
         <section>

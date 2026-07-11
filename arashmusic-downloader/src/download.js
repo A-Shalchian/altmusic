@@ -65,10 +65,10 @@ async function searchSongs(query, count) {
   return results
 }
 
-function downloadInput(input, audioQuality, onProgress) {
+function downloadInput(input, audioQuality, onProgress, outputTemplate) {
   const config = loadConfig()
   const quality = audioQuality || "0"
-  const template = path.join(config.musicDir, "%(artist,uploader)s", "%(title)s.%(ext)s")
+  const template = outputTemplate || path.join(config.musicDir, "%(artist,uploader)s", "%(title)s.%(ext)s")
   const args = [
     input,
     "-x",

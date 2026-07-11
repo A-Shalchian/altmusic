@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import * as api from "../api/subsonic"
+import { getRecommendations, webSearch } from "../api/manage"
 
 const SONGS_PAGE = 200
 
@@ -85,5 +86,24 @@ export function useSearch(query: string) {
     queryKey: ["search", query],
     queryFn: () => api.search(query),
     enabled: query.trim().length > 0
+  })
+}
+
+export function useRecommendations() {
+  return useQuery({
+    queryKey: ["recommendations"],
+    queryFn: () => getRecommendations(),
+    staleTime: 10 * 60 * 1000,
+    retry: 1
+  })
+}
+
+export function useWebSearch(query: string) {
+  return useQuery({
+    queryKey: ["webSearch", query],
+    queryFn: () => webSearch(query),
+    enabled: query.trim().length > 1,
+    staleTime: 5 * 60 * 1000,
+    retry: 1
   })
 }

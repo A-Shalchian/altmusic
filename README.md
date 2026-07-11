@@ -9,7 +9,7 @@ Your own self-hosted music: a Navidrome server, a custom PWA player (arashmusic)
 | `arashmusic/` | The player (React + Vite PWA). Builds to static files. |
 | `arashmusic-downloader/` | Telegram bot (download by name) + a small management server (delete songs) + lyrics fetcher. |
 | `navidrome/` | The music server. Holds your music (`navidrome/music`) and database (`navidrome/data`). |
-| `Caddyfile` | Serves the built app and proxies the APIs on a single origin (`:8080`). |
+| `Caddyfile` | Serves the built app and proxies the APIs on a single origin (`:9000`). |
 | `setup.ps1` | One command that downloads every binary, writes configs, installs deps, and builds the app. |
 
 The binaries (yt-dlp, ffmpeg, Navidrome, Caddy), your music, the database, and your token are NOT in the repo. `setup.ps1` fetches the binaries; your music and config are created locally.
@@ -42,18 +42,18 @@ npm run setup
 npm start
 ```
 
-That launches everything in one terminal (color-labeled): **nav** (Navidrome), **web** (Caddy serving the built app on `:8080`), **bot**, **server**. One Ctrl+C stops all of it.
+That launches everything in one terminal (color-labeled): **nav** (Navidrome), **web** (Caddy serving the built app on `:9000`), **bot**, **server**. One Ctrl+C stops all of it.
 
 First run only: create your Navidrome admin user at **http://localhost:4533** (one-time web form).
 
-Then open the player at **http://localhost:8080**, leave the server field blank, and sign in with your Navidrome username/password.
+Then open the player at **http://localhost:9000**, leave the server field blank, and sign in with your Navidrome username/password.
 
 ## Access from anywhere (Tailscale)
 
 1. Install Tailscale on this machine and on your phone, sign in to the same account on both: https://tailscale.com/download
 2. Expose the app over HTTPS on your private network:
    ```powershell
-   tailscale serve --bg https / http://localhost:8080
+   tailscale serve --bg https / http://localhost:9000
    ```
 3. Find your address:
    ```powershell
@@ -63,9 +63,15 @@ Then open the player at **http://localhost:8080**, leave the server field blank,
 
 Open that URL on your phone, then "Add to Home Screen" to install it like a real app.
 
-## Using the bot
+## Getting music
 
-In your bot's Telegram chat, send a song name (e.g. `lose you to love me`). The bot shows matching results, you tap one, choose a quality (320 / 192 / 128 kbps), and it downloads into your library with cover art and lyrics. Navidrome auto-imports it.
+### From the app (fastest)
+
+Type a song name in the player's Search screen. Below your library results, a "From the internet" section lists matches from YouTube. Tap **Get** and the song downloads at 320 kbps with cover art and lyrics, then appears in your library within seconds (the app triggers a Navidrome scan when the download finishes).
+
+### From Telegram
+
+In your bot's Telegram chat, send a song name (e.g. `lose you to love me`). The bot shows matching results, you tap one, choose a quality (320 / 192 / 128 kbps), and it downloads into your library with cover art and lyrics. Navidrome auto-imports it. You can also paste a Spotify track/album/playlist/artist link to batch-download it.
 
 ## Music and lyrics
 

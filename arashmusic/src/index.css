@@ -2247,3 +2247,115 @@ a {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+
+.web-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background 0.13s ease;
+}
+
+.web-row:hover {
+  background: var(--surface-2);
+}
+
+.web-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.web-row-title {
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.web-row-sub {
+  color: var(--text-faint);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.web-row-error {
+  color: var(--danger);
+}
+
+.web-get {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.web-get:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.web-get:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.web-get.added {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: transparent;
+  opacity: 1;
+}
+
+.web-get.retry {
+  color: var(--danger);
+}
+
+.web-spin {
+  animation: spin 0.9s linear infinite;
+}
+
+.rec-card .card-art-wrap {
+  position: relative;
+}
+
+.rec-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #1a1205;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.rec-card:hover .rec-play,
+.rec-card.getting .rec-play {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (hover: none) {
+  .rec-play {
+    opacity: 1;
+    transform: none;
+  }
+}
