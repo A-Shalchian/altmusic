@@ -179,6 +179,69 @@ function startJob(videoId, quality) {
   return id
 }
 
+const DISCOVER_COUNT = 12
+const DISCOVER_HOUR = 4
+let discoverRunning = false
+
+// nightly Spotify-free "Discover Weekly": pull top recommendations into the
+// library and rewrite the Discover Mix playlist; Navidrome's 1-minute scan
+// schedule imports both automatically
+async function runDiscover() {
+  if (discoverRunning) return
+  discoverRunning = true
+  try {
+    const config = loadConfig()
+    if (config.discover === false) return
+    const data = await getRecommendations(config, true)
+
+    // round-robin across sections so the mix isn't one artist cluster
+    const picks = []
+    for (let i = 0; picks.length < DISCOVER_COUNT; i++) {
+      let added = false
+      for (const section of data.sections) {
+        if (picks.length >= DISCOVER_COUNT) break
+        const track = section.tracks[i]
+        if (track) {
+          picks.push(track)
+          added = true
+        }
+      }
+      if (!added) break
+    }
+
+    const files = []
+    for (const track of picks) {
+      try {
+        const key = trackKey(track.artist, track.title)
+        if (!stagedFile(key)) await grabToStage(track.artist, track.title)
+        const file = moveStaged(key, track.artist, config)
+        if (file) files.push(file)
+      } catch (error) {
+        console.log("discover: skip " + track.artist + " - " + track.title + " (" + error.message + ")")
+      }
+    }
+
+    if (files.length) {
+      const lines = ["#EXTM3U", ...files.map((f) => path.relative(config.musicDir, f).split(path.sep).join("/"))]
+      fs.writeFileSync(path.join(config.musicDir, "Discover Mix.m3u"), lines.join("\n"))
+      console.log("discover: " + files.length + " new tracks in Discover Mix")
+    }
+  } finally {
+    discoverRunning = false
+  }
+}
+
+function scheduleDiscover() {
+  const now = new Date()
+  const next = new Date(now)
+  next.setHours(DISCOVER_HOUR, 0, 0, 0)
+  if (next <= now) next.setDate(next.getDate() + 1)
+  setTimeout(() => {
+    runDiscover().catch((e) => console.log("discover: " + e.message))
+    setInterval(() => runDiscover().catch((e) => console.log("discover: " + e.message)), 24 * 60 * 60 * 1000).unref()
+  }, next - now).unref()
+}
+
 function rowForId(dbPath, id) {
   if (!dbPath || !id || !fs.existsSync(dbPath)) return null
   const db = new DatabaseSync(dbPath, { readOnly: true })
@@ -249,6 +312,13 @@ const server = http.createServer((req, res) => {
         send(res, 500, { ok: false, error: error.message })
       }
     })
+    return
+  }
+
+  if (req.method === "POST" && url.pathname === "/manage/api/discover/run") {
+    const wasRunning = discoverRunning
+    runDiscover().catch((e) => console.log("discover: " + e.message))
+    send(res, 200, { ok: true, started: !wasRunning })
     return
   }
 
@@ -366,6 +436,7 @@ const server = http.createServer((req, res) => {
 
 pruneStage()
 setInterval(pruneStage, 60 * 60 * 1000).unref()
+scheduleDiscover()
 
 server.listen(PORT, () => {
   console.log("arashmusic management server on port " + PORT)
