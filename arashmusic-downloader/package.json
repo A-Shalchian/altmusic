@@ -8,6 +8,7 @@
     "get": "node src/cli.js",
     "grab": "node src/grab.js",
     "lyrics": "node src/backfill-lyrics.js",
+    "fixtags": "node src/fixtags.js",
     "dev:app": "npm --prefix ../arashmusic run dev",
     "nav": "..\\navidrome\\navidrome.exe -c ..\\navidrome\\navidrome.toml",
     "all": "concurrently -n app,bot,server -c cyan,magenta,green \"npm:dev:app\" \"npm:bot\" \"npm:server\"",

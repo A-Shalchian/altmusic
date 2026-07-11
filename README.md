@@ -65,6 +65,12 @@ Open that URL on your phone, then "Add to Home Screen" to install it like a real
 
 ## Getting music
 
+### Discover feed (no typing)
+
+The Home screen shows "Because you listen to ..." and "Because you searched for ..." sections built from your listening history and recent searches (via the free Deezer API). Tap a card and the song downloads and starts playing — the top picks are pre-downloaded in the background so it is instant. Tap the X on a card to never see that song again; deleting a song from your library also blocks it from future recommendations.
+
+Every night at 4am the server also downloads the top 12 recommendations by itself and refreshes a **Discover Mix** playlist, so there is new music every morning without touching anything. Set `"discover": false` in `arashmusic-downloader/config.json` to turn that off.
+
 ### From the app (fastest)
 
 Type a song name in the player's Search screen. Below your library results, a "From the internet" section lists matches from YouTube. Tap **Get** and the song downloads at 320 kbps with cover art and lyrics, then appears in your library within seconds (the app triggers a Navidrome scan when the download finishes).
@@ -82,6 +88,17 @@ In your bot's Telegram chat, send a song name (e.g. `lose you to love me`). The 
   cd arashmusic-downloader
   npm run lyrics
   ```
+
+## Fixing bad metadata
+
+Songs downloaded from YouTube often have uploader channels as the artist ("Rubik Music") or no album. A nightly job (5am) finds those files and asks Claude Code (`claude -p`, uses your Claude subscription login — no API key) for the correct artist/title/album, then rewrites the tags with ffmpeg. Run it manually with:
+
+```powershell
+cd arashmusic-downloader
+npm run fixtags
+```
+
+Requires the Claude Code CLI installed and signed in on this machine. Set `"fixTags": false` in `config.json` to disable the nightly run.
 
 ## Develop
 

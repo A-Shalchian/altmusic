@@ -6,6 +6,7 @@ const { loadConfig, searchSongs, downloadById, downloadInput } = require("./down
 const { downloadTrack } = require("./spotdl")
 const { getRecommendations, trackKey, norm } = require("./recommend")
 const { addToBlacklist, recordSearch } = require("./store")
+const { runFixTags } = require("./fixtags")
 
 const PORT = 4544
 const JOB_TTL = 10 * 60 * 1000
@@ -231,14 +232,14 @@ async function runDiscover() {
   }
 }
 
-function scheduleDiscover() {
+function scheduleDaily(hour, run) {
   const now = new Date()
   const next = new Date(now)
-  next.setHours(DISCOVER_HOUR, 0, 0, 0)
+  next.setHours(hour, 0, 0, 0)
   if (next <= now) next.setDate(next.getDate() + 1)
   setTimeout(() => {
-    runDiscover().catch((e) => console.log("discover: " + e.message))
-    setInterval(() => runDiscover().catch((e) => console.log("discover: " + e.message)), 24 * 60 * 60 * 1000).unref()
+    run()
+    setInterval(run, 24 * 60 * 60 * 1000).unref()
   }, next - now).unref()
 }
 
@@ -436,7 +437,8 @@ const server = http.createServer((req, res) => {
 
 pruneStage()
 setInterval(pruneStage, 60 * 60 * 1000).unref()
-scheduleDiscover()
+scheduleDaily(DISCOVER_HOUR, () => runDiscover().catch((e) => console.log("discover: " + e.message)))
+scheduleDaily(DISCOVER_HOUR + 1, () => runFixTags().catch((e) => console.log("fixtags: " + e.message)))
 
 server.listen(PORT, () => {
   console.log("arashmusic management server on port " + PORT)

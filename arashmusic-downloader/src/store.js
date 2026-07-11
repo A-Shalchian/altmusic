@@ -48,4 +48,16 @@ function recordSearch(query) {
   save(state)
 }
 
-module.exports = { getBlacklist, addToBlacklist, getSearches, recordSearch }
+function getTagFixAttempts() {
+  return new Set(load().tagFixAttempts || [])
+}
+
+function markTagFixAttempts(ids) {
+  const state = load()
+  const list = new Set(state.tagFixAttempts || [])
+  for (const id of ids) list.add(id)
+  state.tagFixAttempts = [...list].slice(-5000)
+  save(state)
+}
+
+module.exports = { getBlacklist, addToBlacklist, getSearches, recordSearch, getTagFixAttempts, markTagFixAttempts }
