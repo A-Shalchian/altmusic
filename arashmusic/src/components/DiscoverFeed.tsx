@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Loader2, Music2, Play, RefreshCw } from "lucide-react"
+import { Loader2, Music2, Play, RefreshCw, X } from "lucide-react"
 import type { RecTrack } from "../api/manage"
-import { getRecommendations, prefetchTrack, pullTrack, waitForJob } from "../api/manage"
+import { dismissTrack, getRecommendations, prefetchTrack, pullTrack, waitForJob } from "../api/manage"
 import { search, startScan } from "../api/subsonic"
 import type { Song } from "../api/types"
 import { useRecommendations } from "../queries/music"
@@ -48,6 +48,7 @@ export function DiscoverFeed() {
   const playQueue = usePlayerStore((s) => s.playQueue)
   const { data: sections, isFetching, isError } = useRecommendations()
   const [busy, setBusy] = useState<Record<string, "getting" | "error">>({})
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [refreshing, setRefreshing] = useState(false)
   const prefetched = useRef(false)
 
@@ -72,6 +73,12 @@ export function DiscoverFeed() {
     } finally {
       setRefreshing(false)
     }
+  }
+
+  function dismiss(event: React.MouseEvent, track: RecTrack) {
+    event.stopPropagation()
+    setHidden((prev) => new Set(prev).add(track.key))
+    dismissTrack(track.artist, track.title)
   }
 
   async function grab(track: RecTrack) {
@@ -117,7 +124,7 @@ export function DiscoverFeed() {
             ) : null}
           </div>
           <div className="card-grid">
-            {section.tracks.map((track) => {
+            {section.tracks.filter((track) => !hidden.has(track.key)).map((track) => {
               const state = busy[track.key]
               return (
                 <div
@@ -133,6 +140,9 @@ export function DiscoverFeed() {
                         <Music2 size={46} color="var(--accent)" />
                       </div>
                     )}
+                    <span className="rec-dismiss" title="Not interested" onClick={(e) => dismiss(e, track)}>
+                      <X size={15} />
+                    </span>
                     <span className="rec-play">
                       {state === "getting" ? (
                         <Loader2 size={20} className="web-spin" />

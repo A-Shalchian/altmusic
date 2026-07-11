@@ -75,6 +75,14 @@ export async function prefetchTrack(artist: string, title: string): Promise<void
   }).catch(() => undefined)
 }
 
+export async function dismissTrack(artist: string, title?: string): Promise<void> {
+  await manageRequest("/manage/api/dismiss", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ artist, title })
+  }).catch(() => undefined)
+}
+
 export async function pullTrack(artist: string, title: string): Promise<string> {
   const data = await manageRequest<{ jobId: string }>("/manage/api/pull", {
     method: "POST",

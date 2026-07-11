@@ -2353,9 +2353,37 @@ a {
   transform: translateY(0);
 }
 
+.rec-dismiss {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  transition: opacity 0.16s ease, background 0.16s ease;
+}
+
+.rec-dismiss:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+}
+
+.rec-card:hover .rec-dismiss {
+  opacity: 1;
+}
+
 @media (hover: none) {
   .rec-play {
     opacity: 1;
     transform: none;
+  }
+
+  .rec-dismiss {
+    opacity: 1;
   }
 }

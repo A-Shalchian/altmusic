@@ -4,7 +4,8 @@ const path = require("path")
 const { DatabaseSync } = require("node:sqlite")
 const { loadConfig, searchSongs, downloadById, downloadInput } = require("./download")
 const { downloadTrack } = require("./spotdl")
-const { getRecommendations, trackKey } = require("./recommend")
+const { getRecommendations, trackKey, norm } = require("./recommend")
+const { addToBlacklist } = require("./store")
 
 const PORT = 4544
 const JOB_TTL = 10 * 60 * 1000
@@ -127,12 +128,11 @@ function startJob(videoId, quality) {
   return id
 }
 
-function pathForId(dbPath, id) {
+function rowForId(dbPath, id) {
   if (!dbPath || !id || !fs.existsSync(dbPath)) return null
   const db = new DatabaseSync(dbPath, { readOnly: true })
   try {
-    const row = db.prepare("select path from media_file where id = ?").get(id)
-    return row ? row.path : null
+    return db.prepare("select path, artist, title from media_file where id = ?").get(id) || null
   } catch (e) {
     void e
     return null
@@ -201,6 +201,29 @@ const server = http.createServer((req, res) => {
     return
   }
 
+  if (req.method === "POST" && url.pathname === "/manage/api/dismiss") {
+    let body = ""
+    req.on("data", (chunk) => {
+      body += chunk
+    })
+    req.on("end", () => {
+      try {
+        const data = JSON.parse(body || "{}")
+        const artist = String(data.artist || "").trim()
+        const title = String(data.title || "").trim()
+        if (!artist) {
+          send(res, 400, { ok: false, error: "missing artist" })
+          return
+        }
+        addToBlacklist(norm(artist) + "|" + (title ? norm(title) : "*"))
+        send(res, 200, { ok: true })
+      } catch (error) {
+        send(res, 500, { ok: false, error: error.message })
+      }
+    })
+    return
+  }
+
   if (req.method === "GET" && url.pathname === "/manage/api/search") {
     const query = (url.searchParams.get("q") || "").trim()
     if (!query) {
@@ -255,8 +278,8 @@ const server = http.createServer((req, res) => {
       try {
         const config = loadConfig()
         const data = JSON.parse(body || "{}")
-        const dbPath = pathForId(config.navidromeDb, data.id)
-        const target = resolveTarget(config.musicDir, dbPath || data.path)
+        const row = rowForId(config.navidromeDb, data.id)
+        const target = resolveTarget(config.musicDir, (row && row.path) || data.path)
         if (!target || !within(config.musicDir, target)) {
           send(res, 400, { ok: false, error: "invalid path" })
           return
@@ -266,6 +289,8 @@ const server = http.createServer((req, res) => {
           return
         }
         fs.unlinkSync(target)
+        // deleted = never wanted; keep it out of future recommendations
+        if (row && row.artist && row.title) addToBlacklist(norm(row.artist) + "|" + norm(row.title))
         const dir = path.dirname(target)
         try {
           if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir)

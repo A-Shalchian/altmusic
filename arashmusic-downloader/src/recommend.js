@@ -1,5 +1,6 @@
 const fs = require("fs")
 const { DatabaseSync } = require("node:sqlite")
+const { getBlacklist } = require("./store")
 
 const CACHE_TTL = 10 * 60 * 1000
 const SEED_LIMIT = 4
@@ -79,7 +80,7 @@ function nameMatches(seed, candidate) {
   return a === b || a.includes(b) || b.includes(a)
 }
 
-async function sectionForSeed(seed, have, haveTitles, seen) {
+async function sectionForSeed(seed, have, haveTitles, seen, blacklist) {
   const found = await fetchJson("https://api.deezer.com/search/artist?q=" + encodeURIComponent(seed))
   const artist = found.data && found.data[0]
   if (!artist) return null
@@ -102,7 +103,8 @@ async function sectionForSeed(seed, have, haveTitles, seen) {
     for (const t of top.data || []) {
       const name = (t.artist && t.artist.name) || a.name
       const k = norm(name) + "|" + norm(t.title)
-      if (have.has(k) || seen.has(k) || haveTitles.has(norm(name + " " + t.title))) continue
+      if (have.has(k) || seen.has(k) || blacklist.has(k) || blacklist.has(norm(name) + "|*")) continue
+      if (haveTitles.has(norm(name + " " + t.title))) continue
       seen.add(k)
       tracks.push({
         key: trackKey(name, t.title),
@@ -122,13 +124,14 @@ async function getRecommendations(config, refresh) {
   if (!refresh && cache.data && Date.now() - cache.at < CACHE_TTL) return cache.data
 
   const { seeds, have, haveTitles } = readLibrary(config.navidromeDb)
+  const blacklist = getBlacklist()
   const sections = []
   const seen = new Set()
 
   for (const seed of seeds) {
     if (sections.length >= SEED_LIMIT) break
     try {
-      const section = await sectionForSeed(seed, have, haveTitles, seen)
+      const section = await sectionForSeed(seed, have, haveTitles, seen, blacklist)
       if (section) sections.push(section)
     } catch (e) {
       void e
