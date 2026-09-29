@@ -14,7 +14,9 @@
     "start": "concurrently -n nav,web,bot,server -c yellow,blue,magenta,green \"npm:nav\" \"npm:caddy\" \"npm:bot\" \"npm:server\"",
     "dev": "concurrently -n nav,app,bot,server -c yellow,cyan,magenta,green \"npm:nav\" \"npm:app\" \"npm:bot\" \"npm:server\"",
     "autostart": "powershell -ExecutionPolicy Bypass -File ./autostart.ps1",
-    "autostart:remove": "powershell -ExecutionPolicy Bypass -File ./autostart.ps1 -Remove"
+    "autostart:remove": "powershell -ExecutionPolicy Bypass -File ./autostart.ps1 -Remove",
+    "desktop:dev": "npm --prefix desktop run dev",
+    "desktop:build": "npm --prefix desktop run build"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"

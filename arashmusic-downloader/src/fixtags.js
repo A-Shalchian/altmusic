@@ -74,11 +74,18 @@ function extractJson(text) {
   return JSON.parse(raw.slice(start, end + 1))
 }
 
+function findPending(config, limit) {
+  const attempted = getTagFixAttempts()
+  return findBroken(config)
+    .filter((r) => !attempted.has(r.id) && fs.existsSync(r.path))
+    .slice(0, limit)
+    .map((r) => ({ id: r.id, file: r.path.split(/[\\/]/).slice(-3).join("/"), title: r.title, artist: r.artist, album: r.album }))
+}
+
 function buildPrompt(rows) {
-  const lines = rows.map((r) => {
-    const rel = r.path.split(/[\\/]/).slice(-3).join("/")
-    return JSON.stringify({ id: r.id, file: rel, title: r.title, artist: r.artist, album: r.album })
-  })
+  const lines = rows.map((r) =>
+    JSON.stringify({ id: r.id, file: r.file, title: r.title, artist: r.artist, album: r.album })
+  )
   return [
     "You fix music metadata. Each line below is one song with its file path and current (possibly wrong or missing) tags.",
     "Using the file path, title and your music knowledge, return the correct primary artist name, clean song title (no 'Official Video', '(Lyrics)', 'M/V' noise), and album name (single/EP/album the song belongs to).",
@@ -118,22 +125,48 @@ function retag(file, tags) {
   })
 }
 
+const differs = (a, b) => String(a).trim().toLowerCase() !== String(b || "").trim().toLowerCase()
+
+// answers come from Claude, run either here or on another machine through
+// the fixtags endpoints; ids that are no longer broken are ignored
+async function applyAnswers(config, answers, attemptedIds) {
+  const byId = new Map(findBroken(config).map((r) => [r.id, r]))
+  let fixed = 0
+  for (const answer of answers || []) {
+    const row = byId.get(answer && answer.id)
+    if (!row || !fs.existsSync(row.path)) continue
+    const tags = {}
+    if (answer.artist && differs(answer.artist, row.artist)) {
+      tags.artist = String(answer.artist)
+      tags.album_artist = String(answer.artist)
+    }
+    if (answer.title && differs(answer.title, row.title)) tags.title = String(answer.title)
+    if (answer.album && differs(answer.album, row.album)) tags.album = String(answer.album)
+    if (!Object.keys(tags).length) continue
+    try {
+      await retag(row.path, tags)
+      fixed++
+      console.log("fixtags: " + path.basename(row.path) + " -> " + JSON.stringify(tags))
+    } catch (error) {
+      console.log("fixtags: retag failed for " + row.path + " (" + error.message + ")")
+    }
+  }
+  markTagFixAttempts((attemptedIds || []).filter((id) => byId.has(id)))
+  return fixed
+}
+
 async function runFixTags() {
   const config = loadConfig()
-  if (config.fixTags === false) return { fixed: 0, scanned: 0 }
-
-  const attempted = getTagFixAttempts()
-  const broken = findBroken(config).filter((r) => !attempted.has(r.id) && fs.existsSync(r.path))
-  if (!broken.length) {
+  const pending = findPending(config, BATCH * MAX_BATCHES)
+  if (!pending.length) {
     console.log("fixtags: nothing to fix")
     return { fixed: 0, scanned: 0 }
   }
 
   let fixed = 0
   let scanned = 0
-  for (let i = 0; i < MAX_BATCHES && i * BATCH < broken.length; i++) {
-    const batch = broken.slice(i * BATCH, (i + 1) * BATCH)
-    scanned += batch.length
+  for (let i = 0; i * BATCH < pending.length; i++) {
+    const batch = pending.slice(i * BATCH, (i + 1) * BATCH)
     let answers
     try {
       answers = extractJson(await askClaude(buildPrompt(batch)))
@@ -141,29 +174,8 @@ async function runFixTags() {
       console.log("fixtags: claude failed (" + error.message + ")")
       break
     }
-
-    const byId = new Map(batch.map((r) => [r.id, r]))
-    for (const answer of answers) {
-      const row = byId.get(answer && answer.id)
-      if (!row) continue
-      const differs = (a, b) => String(a).trim().toLowerCase() !== String(b || "").trim().toLowerCase()
-      const tags = {}
-      if (answer.artist && differs(answer.artist, row.artist)) {
-        tags.artist = String(answer.artist)
-        tags.album_artist = String(answer.artist)
-      }
-      if (answer.title && differs(answer.title, row.title)) tags.title = String(answer.title)
-      if (answer.album && differs(answer.album, row.album)) tags.album = String(answer.album)
-      if (!Object.keys(tags).length) continue
-      try {
-        await retag(row.path, tags)
-        fixed++
-        console.log("fixtags: " + path.basename(row.path) + " -> " + JSON.stringify(tags))
-      } catch (error) {
-        console.log("fixtags: retag failed for " + row.path + " (" + error.message + ")")
-      }
-    }
-    markTagFixAttempts(batch.map((r) => r.id))
+    scanned += batch.length
+    fixed += await applyAnswers(config, answers, batch.map((r) => r.id))
   }
 
   console.log("fixtags: fixed " + fixed + " of " + scanned + " scanned")
@@ -177,4 +189,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { runFixTags }
+module.exports = { runFixTags, findPending, applyAnswers, buildPrompt, askClaude, extractJson, BATCH, MAX_BATCHES }

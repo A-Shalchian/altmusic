@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { Layout } from "./components/Layout"
+import { Admin } from "./screens/Admin"
 import { ArtistView } from "./screens/ArtistView"
 import { Downloads } from "./screens/Downloads"
 import { Favorites } from "./screens/Favorites"
@@ -41,6 +42,7 @@ export function App() {
           <Route path="/stats" element={<Stats />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

@@ -6,6 +6,7 @@ import { ArrowDownToLine, Check, Clock, Heart, HeartOff, ListChecks, ListMusic, 
 import type { Song } from "../api/types"
 import { deleteSong, removeFromPlaylist, star, streamUrl, unstar } from "../api/subsonic"
 import { downloadForOffline, removeOffline } from "../lib/offline"
+import { useMe } from "../queries/music"
 import { usePlayerStore } from "../store/playerStore"
 import { useOfflineStore } from "../store/offlineStore"
 import { formatTime } from "../lib/format"
@@ -30,6 +31,7 @@ interface MenuState {
 
 export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: TrackListProps) {
   const queryClient = useQueryClient()
+  const canDelete = useMe().data?.admin === true
   const playQueue = usePlayerStore((s) => s.playQueue)
   const enqueue = usePlayerStore((s) => s.enqueue)
   const playNext = usePlayerStore((s) => s.playNext)
@@ -189,12 +191,14 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
       icon: offlineIds.includes(song.id) ? <Check size={16} /> : <ArrowDownToLine size={16} />,
       onClick: () => toggleOffline(song)
     })
-    items.push({
-      label: "Delete from library",
-      icon: <Trash2 size={16} />,
-      onClick: () => doDelete(song),
-      danger: true
-    })
+    if (canDelete) {
+      items.push({
+        label: "Delete from library",
+        icon: <Trash2 size={16} />,
+        onClick: () => doDelete(song),
+        danger: true
+      })
+    }
     return items
   }
 
@@ -256,10 +260,12 @@ export function TrackList({ songs, showAlbum = true, playlistId, onReorder }: Tr
               <ListMusic size={16} />
               Playlist
             </button>
-            <button className="select-action danger" onClick={bulkDelete}>
-              <Trash2 size={16} />
-              Delete
-            </button>
+            {canDelete ? (
+              <button className="select-action danger" onClick={bulkDelete}>
+                <Trash2 size={16} />
+                Delete
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

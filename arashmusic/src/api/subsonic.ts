@@ -55,6 +55,19 @@ export function buildUrl(endpoint: string, params: Record<string, string | numbe
   return base(creds.serverUrl) + "/" + endpoint + ".view?" + search.toString()
 }
 
+export function manageHeaders(withPassword = false): Record<string, string> {
+  const creds = currentCredentials()
+  const { salt, token } = authFor(creds)
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-am-user": creds.username,
+    "x-am-token": token,
+    "x-am-salt": salt
+  }
+  if (withPassword) headers["x-am-password"] = creds.password
+  return headers
+}
+
 function currentCredentials(): Credentials {
   const state = useAuthStore.getState()
   return {
@@ -247,10 +260,21 @@ export async function scrobble(id: string, submission = true): Promise<void> {
   await request("scrobble", { id, submission: submission ? "true" : "false" })
 }
 
+export async function saveSongsToPlaylist(name: string, songIds: string[], playlistId?: string): Promise<void> {
+  let url = buildUrl("createPlaylist", playlistId ? { playlistId } : { name })
+  for (const id of songIds) url += "&songId=" + encodeURIComponent(id)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("Playlist save failed (" + res.status + ")")
+  const body = await res.json()
+  if (body["subsonic-response"]?.status === "failed") {
+    throw new Error(body["subsonic-response"].error?.message || "Playlist save failed")
+  }
+}
+
 export async function deleteSong(song: { id: string; path?: string }): Promise<void> {
   const res = await fetch("/manage/api/delete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: manageHeaders(),
     body: JSON.stringify({ id: song.id, path: song.path })
   })
   const data = await res.json().catch(() => ({}))

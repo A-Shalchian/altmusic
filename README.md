@@ -67,9 +67,9 @@ Open that URL on your phone, then "Add to Home Screen" to install it like a real
 
 ### Discover feed (no typing)
 
-The Home screen shows "Because you listen to ..." and "Because you searched for ..." sections built from your listening history and recent searches (via the free Deezer API). Tap a card and the song downloads and starts playing — the top picks are pre-downloaded in the background so it is instant. Tap the X on a card to never see that song again; deleting a song from your library also blocks it from future recommendations.
+The Home screen shows "Because you listen to ..." and "Because you searched for ..." sections built from your listening history and recent searches (via the free Deezer API). Tap a card and the song downloads and starts playing. The top picks are pre-downloaded in the background, so it is instant. Tap the X on a card to never see that song again; deleting a song from your library also blocks it from future recommendations.
 
-Every night at 4am the server also downloads the top 12 recommendations by itself and refreshes a **Discover Mix** playlist, so there is new music every morning without touching anything. Set `"discover": false` in `arashmusic-downloader/config.json` to turn that off.
+Every night at 4am the server downloads the top 12 recommendations for each person. The next time they open the app, those songs land in their own **Discover Mix** playlist. Set `"discover": false` in `arashmusic-downloader/config.json` to turn that off.
 
 ### From the app (fastest)
 
@@ -91,14 +91,37 @@ In your bot's Telegram chat, send a song name (e.g. `lose you to love me`). The 
 
 ## Fixing bad metadata
 
-Songs downloaded from YouTube often have uploader channels as the artist ("Rubik Music") or no album. A nightly job (5am) finds those files and asks Claude Code (`claude -p`, uses your Claude subscription login — no API key) for the correct artist/title/album, then rewrites the tags with ffmpeg. Run it manually with:
+Songs downloaded from YouTube often have uploader channels as the artist ("Rubik Music") or no album. The server lists those songs, and Claude Code (`claude -p`, on your Claude subscription login, no API key) works out the correct artist, title and album. The server then rewrites the tags with ffmpeg.
 
-```powershell
-cd arashmusic-downloader
-npm run fixtags
-```
+Claude Code does not need to be on the music host. Run the fixer from any laptop that has Claude Code signed in:
 
-Requires the Claude Code CLI installed and signed in on this machine. Set `"fixTags": false` in `config.json` to disable the nightly run.
+1. In `arashmusic-downloader`, copy `remote.example.json` to `remote.json`. Fill in the host address (your Tailscale URL) and your admin username and password.
+2. Run it once with `npm run fixtags:remote`.
+3. Schedule it with `npm run fixtags:schedule`. It then runs daily at 21:00 and at logon, and logs to `fixtags-remote.log`. To pick another time, run `powershell -File fixtags-schedule.ps1 -At 23:00`. Remove the schedule with `npm run fixtags:unschedule`.
+
+If the host itself has Claude Code, set `"fixTags": "local"` in its `config.json` and the server runs the fixer at 5am on its own.
+
+## Users
+
+Everyone shares one library. Each person has their own likes, playlists, stats, "not interested" list, recommendations and Discover Mix.
+
+- Sign in as the admin (the Navidrome account you created first) and open **Settings > Manage users**. From there you can add someone, change their password, or remove them.
+- Send the new person the app address, their username and their password.
+- Only admins can delete songs from the library. A deleted song is also blocked from everyone's recommendations.
+- The server checks every `/manage` request against Navidrome. A request without a valid login gets a 401.
+
+## Backups
+
+Every night at 3am the server copies `navidrome.db` (users, likes, playlists, play history), `app.db` (searches, "not interested" lists, Discover Mix) and `config.json` into `arashmusic-downloader/backups/<date>/`, and keeps 14 days. Run `npm run backup` in `arashmusic-downloader` for a copy right now. Set `"backupDir"` in `config.json` to a USB drive or synced folder so a dead disk does not take the backups with it. Music files are not included, so copy `navidrome/music` somewhere yourself.
+
+## Desktop app (Windows)
+
+`desktop/` is a small Tauri app, a 1.1 MB installer. It opens your server in its own window, so it always shows the latest version of the player without reinstalling.
+
+- Build it with `npm run desktop:build`. This needs Rust. The installer lands in `desktop/src-tauri/target/release/bundle/nsis/`.
+- On first launch it asks for the server address, which is your Tailscale URL. Leave it empty to use `http://localhost:9000`. Change it later from the tray icon ("Change server").
+- Closing the window hides it to the tray and the music keeps playing. Quit from the tray menu.
+- The play/pause, next and previous media keys work while the window is in the background.
 
 ## Develop
 
@@ -118,6 +141,9 @@ Runs Navidrome + the Vite dev server (hot reload) + bot + server. The player is 
 | `npm run build` | Rebuild the app after code changes |
 | `npm run autostart` | Launch the whole stack automatically at every logon (hidden) |
 | `npm run autostart:remove` | Turn off auto-start |
+| `npm run desktop:build` | Build the Windows desktop app installer |
+| `npm --prefix arashmusic-downloader run backup` | Back up the databases and config now |
+| `npm --prefix arashmusic-downloader run fixtags:remote` | Fix bad tags on the host using Claude Code on this laptop |
 
 ## Auto-start on boot
 

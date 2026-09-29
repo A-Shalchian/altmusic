@@ -8,6 +8,7 @@ import { usePlaylists } from "../queries/music"
 import { usePlayerStore } from "../store/playerStore"
 import { useHistoryStore } from "../store/historyStore"
 import { formatCount } from "../lib/format"
+import { useDiscoverMixSync } from "../lib/discoverMix"
 
 function greeting(): string {
   const hour = new Date().getHours()
@@ -21,6 +22,7 @@ export function Home() {
   const { data: playlists } = usePlaylists()
   const playQueue = usePlayerStore((s) => s.playQueue)
   const recent = useHistoryStore((s) => s.recent)
+  useDiscoverMixSync()
 
   async function shuffleAll() {
     const songs = await getRandomSongs(100)

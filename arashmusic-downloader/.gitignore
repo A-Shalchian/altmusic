@@ -3,3 +3,7 @@ tools
 config.json
 cache
 state.json
+data
+backups
+remote.json
+state.json.migrated

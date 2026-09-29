@@ -2409,3 +2409,79 @@ a {
     opacity: 1;
   }
 }
+
+.admin-message {
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-users {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.admin-user:first-child {
+  border-top: none;
+}
+
+.admin-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-user-name {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-user-meta {
+  color: var(--text-faint);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a1205;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.icon-btn.danger {
+  color: var(--danger);
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 420px;
+}
+
+.admin-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-dim);
+}

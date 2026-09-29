@@ -1,9 +1,11 @@
 import { useEffect } from "react"
 import { ChevronLeft, ChevronRight, Lock, LogOut, Settings as SettingsIcon } from "lucide-react"
 import { Outlet, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { AudioEngine } from "../audio/AudioEngine"
 import { engine } from "../audio/engine"
 import { useAuthStore } from "../store/authStore"
+import { useHistoryStore } from "../store/historyStore"
 import { useLockStore } from "../store/lockStore"
 import { usePlayerStore } from "../store/playerStore"
 import { useUiStore } from "../store/uiStore"
@@ -15,12 +17,21 @@ import { Sidebar } from "./Sidebar"
 
 export function Layout() {
   const navigate = useNavigate()
-  const logout = useAuthStore((s) => s.logout)
+  const queryClient = useQueryClient()
+  const logoutStore = useAuthStore((s) => s.logout)
+  const clearHistory = useHistoryStore((s) => s.clear)
   const lock = useLockStore((s) => s.lock)
   const requestSetup = useLockStore((s) => s.requestSetup)
   const hasPin = useLockStore((s) => s.pinHash !== null)
   const nowPlayingOpen = useUiStore((s) => s.nowPlayingOpen)
   const queueOpen = useUiStore((s) => s.queueOpen)
+
+  // a shared device can switch between users, so drop the previous user's cached data
+  function logout() {
+    queryClient.clear()
+    clearHistory()
+    logoutStore()
+  }
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

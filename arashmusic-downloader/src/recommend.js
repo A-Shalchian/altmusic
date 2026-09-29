@@ -7,7 +7,7 @@ const SEED_LIMIT = 4
 const RELATED_PER_SEED = 3
 const TRACKS_PER_SECTION = 12
 
-let cache = { at: 0, data: null }
+const cache = new Map()
 
 function norm(value) {
   return String(value || "")
@@ -32,7 +32,7 @@ function fetchJson(url) {
     .finally(() => clearTimeout(timer))
 }
 
-function readLibrary(dbPath) {
+function readLibrary(dbPath, userId) {
   if (!dbPath || !fs.existsSync(dbPath)) return { seeds: [], have: new Set(), haveTitles: new Set() }
   const db = new DatabaseSync(dbPath, { readOnly: true })
   try {
@@ -47,10 +47,10 @@ function readLibrary(dbPath) {
         .prepare(
           "select mf.artist as artist, sum(coalesce(a.play_count, 0)) + 5 * sum(case when a.starred then 1 else 0 end) as score " +
             "from annotation a join media_file mf on mf.id = a.item_id " +
-            "where a.item_type = 'media_file' " +
+            "where a.item_type = 'media_file' and a.user_id = ? " +
             "group by mf.artist order by score desc limit 8"
         )
-        .all()
+        .all(userId)
         .map((r) => r.artist)
         .filter(Boolean)
     } catch (e) {
@@ -140,18 +140,19 @@ async function sectionForSeed(seed, have, haveTitles, seen, blacklist, title) {
   return { title: title || "Because you listen to " + seed, tracks: tracks.slice(0, TRACKS_PER_SECTION) }
 }
 
-async function getRecommendations(config, refresh) {
-  if (!refresh && cache.data && Date.now() - cache.at < CACHE_TTL) return cache.data
+async function getRecommendations(config, refresh, userId) {
+  const cached = cache.get(userId)
+  if (!refresh && cached && Date.now() - cached.at < CACHE_TTL) return cached.data
 
-  const { seeds, have, haveTitles } = readLibrary(config.navidromeDb)
-  const blacklist = getBlacklist()
+  const { seeds, have, haveTitles } = readLibrary(config.navidromeDb, userId)
+  const blacklist = getBlacklist(userId)
   const sections = []
   const seen = new Set()
   const usedArtists = new Set()
 
   // recent searches are the strongest taste signal — lead with them
   const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000
-  const recentSearches = getSearches().filter((s) => s.at >= cutoff).slice(0, 3)
+  const recentSearches = getSearches(userId).filter((s) => s.at >= cutoff).slice(0, 3)
   for (const search of recentSearches) {
     if (sections.length >= 2) break
     try {
@@ -181,7 +182,7 @@ async function getRecommendations(config, refresh) {
   }
 
   const data = { sections }
-  if (sections.length) cache = { at: Date.now(), data }
+  if (sections.length) cache.set(userId, { at: Date.now(), data })
   return data
 }
 

@@ -93,6 +93,13 @@ export function AudioEngine() {
       onAdvance: () => usePlayerStore.getState().next()
     })
 
+    // the desktop app forwards global media keys here
+    ;(window as unknown as { amusicMedia: Record<string, () => void> }).amusicMedia = {
+      toggle: () => usePlayerStore.getState().toggle(),
+      next: () => usePlayerStore.getState().next(),
+      prev: () => usePlayerStore.getState().prev()
+    }
+
     if ("mediaSession" in navigator) {
       navigator.mediaSession.setActionHandler("play", () => setPlaying(true))
       navigator.mediaSession.setActionHandler("pause", () => setPlaying(false))

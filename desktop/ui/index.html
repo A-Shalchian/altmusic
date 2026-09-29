@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>arashmusic</title>
+    <style>
+      :root {
+        --bg: #0b0a0c;
+        --surface: #141215;
+        --border: rgba(255, 255, 255, 0.13);
+        --text: #f6f4f1;
+        --text-dim: #a8a29b;
+        --text-faint: #6f6a64;
+        --accent: #f4b740;
+        --accent-bright: #ffcd6b;
+        --danger: #f06a55;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      form {
+        width: 100%;
+        max-width: 400px;
+        background: var(--surface);
+        border-radius: 18px;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand img {
+        width: 40px;
+        height: 40px;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      h1 b {
+        color: var(--accent);
+      }
+      p {
+        color: var(--text-dim);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-dim);
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      input {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        padding: 13px 15px;
+        color: var(--text);
+        font: inherit;
+        font-size: 15px;
+        outline: none;
+      }
+      input:focus {
+        border-color: var(--accent);
+      }
+      input::placeholder {
+        color: var(--text-faint);
+      }
+      button {
+        background: var(--accent);
+        color: #1a1205;
+        border: none;
+        font: inherit;
+        font-weight: 700;
+        font-size: 15px;
+        padding: 14px;
+        border-radius: 11px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--accent-bright);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .error {
+        color: var(--danger);
+        font-size: 13px;
+        font-weight: 600;
+        min-height: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="form">
+      <div class="brand">
+        <img src="icon.svg" alt="" />
+        <h1>arash<b>music</b></h1>
+      </div>
+      <p>Paste the address of your music server. You only do this once.</p>
+      <label>
+        Server address
+        <input id="url" placeholder="http://localhost:9000" autocomplete="off" spellcheck="false" autofocus />
+      </label>
+      <div class="error" id="error"></div>
+      <button id="go" type="submit">Connect</button>
+    </form>
+    <script>
+      const form = document.getElementById("form")
+      const input = document.getElementById("url")
+      const error = document.getElementById("error")
+      const go = document.getElementById("go")
+
+      function normalize(raw) {
+        let value = raw.trim() || "http://localhost:9000"
+        if (!/^https?:\/\//i.test(value)) value = "https://" + value
+        return new URL(value).origin
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault()
+        error.textContent = ""
+        let url
+        try {
+          url = normalize(input.value)
+        } catch {
+          error.textContent = "That does not look like an address."
+          return
+        }
+        go.disabled = true
+        go.textContent = "Connecting"
+        try {
+          // no-cors only proves the server answers; the setup page cannot read its response
+          await fetch(url + "/manage/api/health", { mode: "no-cors", cache: "no-store" })
+        } catch {
+          error.textContent = "Could not reach " + url + ". Is the server on and Tailscale connected?"
+          go.disabled = false
+          go.textContent = "Connect"
+          return
+        }
+        await window.__TAURI__.core.invoke("set_server", { url })
+      })
+    </script>
+  </body>
+</html>

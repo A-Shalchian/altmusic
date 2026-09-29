@@ -1,3 +1,6 @@
+import { Users } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useMe } from "../queries/music"
 import { EQ_BANDS, useSettingsStore } from "../store/settingsStore"
 import { ACCENT_PRESETS, useThemeStore } from "../store/themeStore"
 
@@ -20,6 +23,8 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 }
 
 export function Settings() {
+  const navigate = useNavigate()
+  const { data: me } = useMe()
   const crossfade = useSettingsStore((s) => s.crossfade)
   const setCrossfade = useSettingsStore((s) => s.setCrossfade)
   const eqEnabled = useSettingsStore((s) => s.eqEnabled)
@@ -37,6 +42,17 @@ export function Settings() {
   return (
     <div className="content fade-up">
       <h1 className="greeting">Settings</h1>
+
+      {me?.admin ? (
+        <section className="settings-section">
+          <h2 className="settings-title">Users</h2>
+          <p className="settings-desc">Add people, change their passwords, or remove them.</p>
+          <button className="chip-btn" onClick={() => navigate("/admin")}>
+            <Users size={16} />
+            Manage users
+          </button>
+        </section>
+      ) : null}
 
       <section className="settings-section">
         <h2 className="settings-title">Accent color</h2>

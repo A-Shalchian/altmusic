@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Only the bundled setup page may call the app; the remote player gets no native access.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

@@ -7,12 +7,14 @@ const MAX_HISTORY = 40
 interface HistoryState {
   recent: Song[]
   record: (song: Song) => void
+  clear: () => void
 }
 
 export const useHistoryStore = create<HistoryState>()(
   persist(
     (set) => ({
       recent: [],
+      clear: () => set({ recent: [] }),
       record: (song) =>
         set((s) => {
           if (s.recent[0]?.id === song.id) return {}
